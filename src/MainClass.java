@@ -1,12 +1,9 @@
-/**
- * Created by Kristofer on 02/06/2017.
- */
-public class Solve {
+public class MainClass {
 
 
-    static final String testString = "  1 4 3   8  96  4  48  9        5 34  5 7  98 9        8  27  7  43  8   6 8 4  ";
-    static final String fileLocation = "C:/Users/Kristofer.DESKTOP-4AMDEPH/Google Drive/Proge/Sudoku/src/50sudokus.txt";
-    static final TimeMeasure measure = new TimeMeasure();
+    private static final String testString = "  1 4 3   8  96  4  48  9        5 34  5 7  98 9        8  27  7  43  8   6 8 4  ";
+    private static final String fileLocation = "C:/Users/Kristofer.DESKTOP-4AMDEPH/Google Drive/Proge/Sudoku/src/50sudokus.txt";
+    private static final TimeMeasure measure = new TimeMeasure();
 
     public static void main(String[] args){
         //TODO vs10 add graphics ps! in the end probably
@@ -69,14 +66,14 @@ public class Solve {
     }
 
 
-    static void println(Object... o) {
+    private static void println(Object... o) {
         for (Object i : o) {
             System.out.print(i + " ");
         }
         newLine();
     }
 
-    static void newLine(){
+    private static void newLine(){
         System.out.println();
     }
 }
