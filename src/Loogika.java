@@ -8,8 +8,8 @@ import java.util.Scanner;
 public class Loogika {
 
     //settings
-    static final int dim = 3;
-    static final int dim2 = 9;
+    static final int dim = 4;
+    static final int dim2 = 16;
     static final boolean findNextOnes = false;
     static final boolean sameBoxFirst = true;
     static int solutionsAmount = 0;
@@ -111,7 +111,7 @@ public class Loogika {
             while (i <= dim2) {
                 somethingDone = false;
                 Kast kast = getKast(i, game.kastid);
-                ArrayList<ArrayList> availableSlots = new ArrayList<>();
+                ArrayList<ArrayList<Integer>> availableSlots = new ArrayList<ArrayList<Integer>>();
                 ArrayList<Lahter> lahtridInBox = arrayToArrayList(kast.getLahtrid());
                 ArrayList<Integer> olemasNumbrid = new ArrayList<>();
                 for (int j = 1; j <= dim2; j++) {
@@ -154,7 +154,7 @@ public class Loogika {
             }
         }else{
             for (Kast kast : game.kastid) {
-                ArrayList<ArrayList> availableSlots = new ArrayList<>();
+                ArrayList<ArrayList<Integer>> availableSlots = new ArrayList<>();
                 ArrayList<Lahter> lahtridInBox = arrayToArrayList(kast.getLahtrid());
                 ArrayList<Integer> olemasNumbrid = new ArrayList<>();
                 for (int j = 1; j <= dim2; j++) {
@@ -200,7 +200,7 @@ public class Loogika {
 
         //rows
         for (int row = 1; row <= dim2; row++) {
-            ArrayList<ArrayList> availableSlots = new ArrayList<>();
+            ArrayList<ArrayList<Integer>> availableSlots = new ArrayList<ArrayList<Integer>>();
             ArrayList<Lahter> lahtridInRow = getRow(row, game.kastid);
             ArrayList<Integer> olemasNumbrid = new ArrayList<>();
             for (int j = 1; j <= dim2; j++) {
@@ -243,7 +243,7 @@ public class Loogika {
 
         //columns
         for (int column = 1; column <= dim2; column++) {
-            ArrayList<ArrayList> availableSlots = new ArrayList<>();
+            ArrayList<ArrayList<Integer>> availableSlots = new ArrayList<ArrayList<Integer>>();
             ArrayList<Lahter> lahtridInColumn = getColumn(column, game.kastid);
             ArrayList<Integer> olemasNumbrid = new ArrayList<>();
             for (int j = 1; j <= dim2; j++) {
@@ -312,7 +312,7 @@ public class Loogika {
 
         //box
         for (Kast kast : game.kastid) {
-            ArrayList<ArrayList> availableSlots = new ArrayList<>();
+            ArrayList<ArrayList<Integer>> availableSlots = new ArrayList<>();
             ArrayList<Lahter> lahtridInBox = arrayToArrayList(kast.getLahtrid());
             ArrayList<Integer> olemasNumbrid = new ArrayList<>();
             for (int j = 1; j <= dim2; j++) {
@@ -342,13 +342,13 @@ public class Loogika {
                 if (arvud.size() >= 2 && arvud.size() <= dim) {
 
                     //check number of rows
-                    HashSet moduleRow = new HashSet();
+                    HashSet<Integer> moduleRow = new HashSet<>();
                     for (int arv : arvud) {
                         moduleRow.add(getIntFromLinearInt(arv));
                     }
                     // candidate line (row) is active
                     if (moduleRow.size() == 1) {
-                        ArrayList<Integer> moduleList = new ArrayList(moduleRow);
+                        ArrayList<Integer> moduleList = new ArrayList<>(moduleRow);
                         for (Lahter lahter : getRow((kast.locY - 1) * dim + moduleList.get(0), game.kastid)) {
                             if (lahter.kast != kast) {
                                 if (lahter.getNumbers().remove((Integer) (j + 1))) {
@@ -363,13 +363,13 @@ public class Loogika {
                         }
                     }
                     //check number of columns
-                    HashSet moduleColumn = new HashSet();
+                    HashSet<Integer> moduleColumn = new HashSet<>();
                     for (int arv : arvud) {
                         moduleColumn.add(getModuleFromLinearInt(arv));
                     }
                     // candidate line (column) is active
                     if (moduleColumn.size() == 1) {
-                        ArrayList<Integer> moduleList = new ArrayList(moduleColumn);
+                        ArrayList<Integer> moduleList = new ArrayList<>(moduleColumn);
                         for (Lahter lahter : getColumn((kast.locX - 1) * dim + moduleList.get(0), game.kastid)) {
                             if (lahter.kast != kast) {
                                 if (lahter.getNumbers().remove((Integer) (j + 1))) {
@@ -389,7 +389,7 @@ public class Loogika {
 
         //rows
         for (int row = 1; row <= dim2; row++) {
-            ArrayList<ArrayList> availableSlots = new ArrayList<>();
+            ArrayList<ArrayList<Integer>> availableSlots = new ArrayList<>();
             ArrayList<Lahter> lahtridInRow = getRow(row, game.kastid);
             ArrayList<Integer> olemasNumbrid = new ArrayList<>();
             for (int j = 1; j <= dim2; j++) {
@@ -417,13 +417,13 @@ public class Loogika {
                     throw new FillingException();
                 }
                 if (arvud.size() >= 2 && arvud.size() <= dim) {
-                    HashSet module = new HashSet();
+                    HashSet<Integer> module = new HashSet<>();
                     for (int arv : arvud) {
                         module.add(getIntFromLinearInt(arv));
                     }
                     // multiple lines is active
                     if (module.size() == 1) {
-                        ArrayList<Integer> moduleList = new ArrayList(module);
+                        ArrayList<Integer> moduleList = new ArrayList<>(module);
                         for (Lahter lahter : getKast(moduleList.get(0), getIntFromLinearInt(row), game.kastid).getLahtrid()) {
                             if (lahter.locY != getModuleFromLinearInt(row)) {
                                 if (lahter.getNumbers().remove((Integer) (j + 1))) {
@@ -443,7 +443,7 @@ public class Loogika {
 
         //columns
         for (int column = 1; column <= dim2; column++) {
-            ArrayList<ArrayList> availableSlots = new ArrayList<>();
+            ArrayList<ArrayList<Integer>> availableSlots = new ArrayList<>();
             ArrayList<Lahter> lahtridInColumn = getColumn(column, game.kastid);
             ArrayList<Integer> olemasNumbrid = new ArrayList<>();
             for (int j = 1; j <= dim2; j++) {
@@ -471,13 +471,13 @@ public class Loogika {
                     throw new FillingException();
                 }
                 if (arvud.size() >= 2 && arvud.size() <= dim) {
-                    HashSet module = new HashSet();
+                    HashSet<Integer> module = new HashSet<>();
                     for (int arv : arvud) {
                         module.add(getIntFromLinearInt(arv));
                     }
                     //multiple lines is active
                     if (module.size() == 1) {
-                        ArrayList<Integer> moduleList = new ArrayList(module);
+                        ArrayList<Integer> moduleList = new ArrayList<Integer>(module);
                         for (Lahter lahter : getKast(getIntFromLinearInt(column), moduleList.get(0), game.kastid).getLahtrid()) {
                             if (lahter.locX != getModuleFromLinearInt(column)) {
                                 if (lahter.getNumbers().remove((Integer) (j + 1))) {
@@ -576,7 +576,7 @@ public class Loogika {
                             chosenOnes.add(emptyLahtrid.get(index));
                         }
                         //finding naked pairs, triplets, ...
-                        HashSet<Integer> numbers = new HashSet();
+                        HashSet<Integer> numbers = new HashSet<>();
                         for (Lahter lahter : chosenOnes){
                             for (int index : lahter.getNumbers()){
                                 numbers.add(index);
@@ -627,7 +627,7 @@ public class Loogika {
                             chosenOnes.add(emptyLahtrid.get(index));
                         }
                         //finding naked pairs, triplets, ...
-                        HashSet<Integer> numbers = new HashSet();
+                        HashSet<Integer> numbers = new HashSet<>();
                         for (Lahter lahter : chosenOnes) {
                             for (int index : lahter.getNumbers()) {
                                 numbers.add(index);
@@ -770,7 +770,7 @@ public class Loogika {
                     for (int lahterX = 1; lahterX <= dim; lahterX++) {
                         int value = 0;
                         value = getKast(kastX, kastY, game1.kastid).getLahter(lahterX, lahterY).getValue();
-                        print(value == 0 ? "*" : (value > dim2 ? String.valueOf((char) (value - dim2 - 1 + 97)) : Integer.toString(value)));
+                        print(value == 0 ? "*" : (value > 9 ? String.valueOf((char) (value - dim2 - 1 + 97 + 7)) : Integer.toString(value)));
                     }
                     print(" ");
                 }
@@ -779,7 +779,7 @@ public class Loogika {
                     for (int lahterX = 1; lahterX <= dim; lahterX++) {
                         int value = 0;
                         value = getKast(kastX, kastY, game2.kastid).getLahter(lahterX, lahterY).getValue();
-                        print(value == 0 ? "*" : (value > dim2 ? String.valueOf((char) (value - dim2 - 1 + 97)) : Integer.toString(value)));
+                        print(value == 0 ? "*" : (value > 9 ? String.valueOf((char) (value - dim2 - 1 + 97 + 7)) : Integer.toString(value)));
                     }
                     print(" ");
                 }
@@ -807,7 +807,7 @@ public class Loogika {
      */
     static void loadFromString(Game game, String sis) {
 
-        HashSet characters = new HashSet();
+        HashSet<Character> characters = new HashSet<>();
         characters.add(' ');
         characters.add('*');
         characters.add('0');
@@ -829,7 +829,8 @@ public class Loogika {
                         lahter.setValue(intSis);
                     } catch (NumberFormatException e) {
                         char ch = sisString.toLowerCase().charAt(0);
-                        intSis = dim2 + (int) ch - 96;
+                        intSis = dim2 + (int) ch - 103;
+                        println(ch, intSis);
                         lahter.setValue(intSis);
                     }
                     lahter.setNumbers(new ArrayList());
@@ -885,7 +886,7 @@ public class Loogika {
     static ArrayList<String> readTextFromFile(File file) throws FileNotFoundException{
         try {
             Scanner scan = new Scanner(file);
-            ArrayList lines = new ArrayList();
+            ArrayList<String> lines = new ArrayList<>();
             while (scan.hasNextLine()) {
                 lines.add(scan.nextLine());
             }
@@ -922,8 +923,8 @@ public class Loogika {
         return kast;
     }
 
-    static ArrayList getNumberList() {
-        ArrayList result = new ArrayList(dim2);
+    static ArrayList<Integer> getNumberList() {
+        ArrayList<Integer> result = new ArrayList<Integer>(dim2);
         for (int i = 1; i <= dim2; i++) {
             result.add(i);
         }
@@ -1003,7 +1004,7 @@ public class Loogika {
     }
 
     private static boolean checkRow(int ind, Kast[] difKastid) {
-        ArrayList numbers = new ArrayList();
+        ArrayList<Integer> numbers = new ArrayList<Integer>();
         for (Lahter lahter : getRow(ind, difKastid)) {
             if (lahter.getValue() != 0) {
                 if (numbers.contains(lahter.getValue())) {
@@ -1017,7 +1018,7 @@ public class Loogika {
     }
 
     private static boolean checkColumn(int ind, Kast[] difKastid) {
-        ArrayList numbers = new ArrayList();
+        ArrayList<Integer> numbers = new ArrayList<>();
         for (Lahter lahter : getColumn(ind, difKastid)) {
             if (lahter.getValue() != 0) {
                 if (numbers.contains(lahter.getValue())) {
@@ -1031,7 +1032,7 @@ public class Loogika {
     }
 
     private static boolean checkBox(int ind, Kast[] difKastid) {
-        ArrayList numbers = new ArrayList();
+        ArrayList<Integer> numbers = new ArrayList<>();
         for (Lahter lahter : getKast(getXYFromBoxInt(ind), difKastid).getLahtrid()) {
             if (lahter.getValue() != 0) {
                 if (numbers.contains(lahter.getValue())) {
@@ -1191,7 +1192,7 @@ public class Loogika {
     }
 
     static ArrayList<Integer> arrayToArrayList(int[] set) {
-        ArrayList list = new ArrayList();
+        ArrayList<Integer> list = new ArrayList<>();
         for (int i : set) {
             list.add(i);
         }
