@@ -1,17 +1,19 @@
 import javax.swing.*;
 import java.awt.*;
-import java.io.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Scanner;
 
 public class Loogika {
 
-    //settings
-    static final int dim = 4;
-    static final int dim2 = 16;
     static final boolean findNextOnes = false;
     static final boolean sameBoxFirst = true;
+    //settings
+    public static int dim = 3;
+    public static int dim2 = 9;
     static int solutionsAmount = 0;
     static int gamesAmount = 0;
     static ArrayList<Game> puzzles = new ArrayList<>();
@@ -308,7 +310,7 @@ public class Loogika {
     private static boolean filling2(Game game) throws FillingException {
         boolean somethingDone = false;
 
-        println("logic level 2");
+        game.messages.add("logic level 2");
 
         //box
         for (Kast kast : game.kastid) {
@@ -379,7 +381,7 @@ public class Loogika {
                             }
                         }
                         if (somethingDone){
-                            game.messages.add("row " + ((kast.locX - 1) * dim + moduleList.get(0)) + ": "+ (j+1));
+                            game.messages.add("column " + ((kast.locX - 1) * dim + moduleList.get(0)) + ": " + (j + 1));
                             return true;
                         }
                     }
@@ -501,7 +503,7 @@ public class Loogika {
     private static boolean filling3(Game game) throws FillingException {
         boolean somethingDone = false;
 
-        println("logic level 3");
+        game.messages.add("logic level 3");
 
         //naked and hidden pairs, triplets, quarters
 
@@ -790,7 +792,7 @@ public class Loogika {
     }
 
     static void printSolutions(){
-        for (int i = 0;i < solutionsAmount; i++){
+        for (int i = 0; i < gamesAmount; i++) {
             for (String message : solutions.get(i).messages){
                 println(message);
             }
@@ -830,7 +832,6 @@ public class Loogika {
                     } catch (NumberFormatException e) {
                         char ch = sisString.toLowerCase().charAt(0);
                         intSis = dim2 + (int) ch - 103;
-                        println(ch, intSis);
                         lahter.setValue(intSis);
                     }
                     lahter.setNumbers(new ArrayList());

@@ -1,9 +1,6 @@
 import java.io.File;
 import java.util.ArrayList;
 
-/**
- * Created by Kristofer on 02/06/2017.
- */
 public class Game {
 
     public Kast[] kastid;
@@ -19,8 +16,8 @@ public class Game {
         this.messages = messages;
     }
 
-    public void importInfo(String info){
-        Loogika.loadFromString(this, info);
+    public void importInfo(int stringIndex) {
+        Loogika.loadFromString(this, MainClass.testStrings.get(stringIndex - 1));
     }
 
     /**
