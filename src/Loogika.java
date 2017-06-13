@@ -2,25 +2,22 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Scanner;
 
 public class Loogika {
 
-    static final boolean findNextOnes = false;
-    static final boolean sameBoxFirst = true;
-    //settings
-    public static int dim = 3;
-    public static int dim2 = 9;
+    private static final boolean findNextOnes = false;
+    private static final boolean sameBoxFirst = true;
     static int solutionsAmount = 0;
     static int gamesAmount = 0;
-    static ArrayList<Game> puzzles = new ArrayList<>();
-    static ArrayList<Game> solutions = new ArrayList<>();
-    static FileChooser fileChoose = new FileChooser();
-    static TimeMeasure measure = new TimeMeasure();
-    static ArrayList<String> solutionSteps = new ArrayList<>();
+    //settings
+    private static int dim = 3;
+    private static int dim2 = 9;
+    private static ArrayList<Game> puzzles = new ArrayList<>();
+    private static ArrayList<Game> solutions = new ArrayList<>();
 
 
     /**
@@ -59,9 +56,8 @@ public class Loogika {
     }
 
     /**
-     * @param game
-     * @return completed sudoku
-     * @throws FillingException, FinishedException
+     * @param game game
+     * @throws FillingException FinishedException
      */
     private static void continuousFilling(Game game) throws FillingException, FinishedException {
         try {
@@ -84,9 +80,7 @@ public class Loogika {
                 }
                 throw new FinishedException(game,false);
             }
-        } catch (FillingException e) {
-            throw e;
-        } catch (FinishedException e) {
+        } catch (FillingException | FinishedException e) {
             throw e;
         }
     }
@@ -318,7 +312,7 @@ public class Loogika {
             ArrayList<Lahter> lahtridInBox = arrayToArrayList(kast.getLahtrid());
             ArrayList<Integer> olemasNumbrid = new ArrayList<>();
             for (int j = 1; j <= dim2; j++) {
-                availableSlots.add(new ArrayList<Integer>());
+                availableSlots.add(new ArrayList<>());
             }
             for (int j = 0; j < dim2; j++) {
                 Lahter lahter = lahtridInBox.get(j);
@@ -395,7 +389,7 @@ public class Loogika {
             ArrayList<Lahter> lahtridInRow = getRow(row, game.kastid);
             ArrayList<Integer> olemasNumbrid = new ArrayList<>();
             for (int j = 1; j <= dim2; j++) {
-                availableSlots.add(new ArrayList<Integer>());
+                availableSlots.add(new ArrayList<>());
             }
             for (int j = 0; j < dim2; j++) {
                 Lahter lahter = lahtridInRow.get(j);
@@ -449,7 +443,7 @@ public class Loogika {
             ArrayList<Lahter> lahtridInColumn = getColumn(column, game.kastid);
             ArrayList<Integer> olemasNumbrid = new ArrayList<>();
             for (int j = 1; j <= dim2; j++) {
-                availableSlots.add(new ArrayList<Integer>());
+                availableSlots.add(new ArrayList<>());
             }
             for (int j = 0; j < dim2; j++) {
                 Lahter lahter = lahtridInColumn.get(j);
@@ -545,7 +539,7 @@ public class Loogika {
                                 }
                             }
                             for (int usedNumber : numbers){
-                                if (lahter.getNumbers().remove((Object)usedNumber)){
+                                if (lahter.getNumbers().remove((Integer) usedNumber)) {
                                     somethingDone = true;
                                 }
                             }
@@ -597,7 +591,7 @@ public class Loogika {
                                 }
                             }
                             for (int usedNumber : numbers){
-                                if (lahter.getNumbers().remove((Object)usedNumber)){
+                                if (lahter.getNumbers().remove((Integer) usedNumber)) {
                                     somethingDone = true;
                                 }
                             }
@@ -648,7 +642,7 @@ public class Loogika {
                                 }
                             }
                             for (int usedNumber : numbers) {
-                                if (lahter.getNumbers().remove((Object) usedNumber)) {
+                                if (lahter.getNumbers().remove((Integer) usedNumber)) {
                                     somethingDone = true;
                                 }
                             }
@@ -724,7 +718,7 @@ public class Loogika {
     }
 
 
-    public static Game copyGame(Game game) {
+    static Game copyGame(Game game) {
         Kast[] clone = newKastid();
 
         for (int i = 0; i < dim2; i++) {
@@ -737,35 +731,15 @@ public class Loogika {
         return new Game(clone, game.messages);
     }
 
-    static ArrayList copyList(ArrayList<Integer> in) {
-        ArrayList out = new ArrayList();
+    private static ArrayList<Integer> copyList(ArrayList<Integer> in) {
+        ArrayList<Integer> out = new ArrayList<>();
         for (int a : in) {
             out.add(a);
         }
         return out;
     }
 
-
-    private static void printGrid(Kast[] difKastid) {
-        for (int kastY = 1; kastY <= dim; kastY++) {
-            for (int lahterY = 1; lahterY <= dim; lahterY++) {
-                for (int kastX = 1; kastX <= dim; kastX++) {
-                    for (int lahterX = 1; lahterX <= dim; lahterX++) {
-                        int value = 0;
-                        value = getKast(kastX, kastY, difKastid).getLahter(lahterX, lahterY).getValue();
-                        print(value == 0 ? "*" : (value > dim2 ? String.valueOf((char) (value - dim2 - 1 + 97)) : Integer.toString(value)));
-                    }
-                    print(" ");
-                }
-                newLine();
-            }
-            newLine();
-        }
-        newLine();
-        newLine();
-    }
-
-    static void printSidewaysGrid(Game game1, Game game2) {
+    private static void printSidewaysGrid(Game game1, Game game2) {
         for (int kastY = 1; kastY <= dim; kastY++) {
             for (int lahterY = 1; lahterY <= dim; lahterY++) {
                 for (int kastX = 1; kastX <= dim; kastX++) {
@@ -804,8 +778,8 @@ public class Loogika {
 
     /**
      *
-     * @param game
-     * @param sis
+     * @param game game
+     * @param sis the input string line by line concatenated
      */
     static void loadFromString(Game game, String sis) {
 
@@ -842,9 +816,9 @@ public class Loogika {
 
     /**
      *
-     * @param game
-     * @param file
-     * @param a
+     * @param game the game object
+     * @param file the file to be read
+     * @param a the number of lines between sudokus
      */
     static void loadFromFile(Game game, File file, int a) {
 
@@ -866,7 +840,7 @@ public class Loogika {
                 if (sis.contains("0")) {//tühi Lahter
                     lahter.setNumbers(getNumberList());
                 } else {//lahtris on number
-                    int sisInt = 0;
+                    int sisInt;
                     try {
                         sisInt = Integer.parseInt(sis);
                         lahter.setValue(sisInt);
@@ -884,7 +858,7 @@ public class Loogika {
      * @param file for example: /src/50sudokus.txt
      * @return string of contents
      */
-    static ArrayList<String> readTextFromFile(File file) throws FileNotFoundException{
+    private static ArrayList<String> readTextFromFile(File file) throws FileNotFoundException {
         try {
             Scanner scan = new Scanner(file);
             ArrayList<String> lines = new ArrayList<>();
@@ -894,7 +868,7 @@ public class Loogika {
 //            println("File read successfully!");
             return lines;
         }catch (FileNotFoundException e){
-            throw e;
+            throw new FileNotFoundException();
         }
     }
 
@@ -912,7 +886,7 @@ public class Loogika {
      * @param locY 1-3
      * @return Kast
      */
-    static Kast genKast(int locX, int locY) {
+    private static Kast genKast(int locX, int locY) {
         Lahter[] lahtrid = new Lahter[dim2];
         for (int i = 0; i < dim2; i++) {//dim2 korda tee Lahter
             lahtrid[i] = new Lahter(i % dim + 1, i / dim + 1, getNumberList(), 0,null, null);
@@ -924,8 +898,8 @@ public class Loogika {
         return kast;
     }
 
-    static ArrayList<Integer> getNumberList() {
-        ArrayList<Integer> result = new ArrayList<Integer>(dim2);
+    private static ArrayList<Integer> getNumberList() {
+        ArrayList<Integer> result = new ArrayList<>(dim2);
         for (int i = 1; i <= dim2; i++) {
             result.add(i);
         }
@@ -944,7 +918,7 @@ public class Loogika {
         return lahtrid;
     }
 
-    static ArrayList<Lahter> getColumn(int x, Kast[] difKastid) {
+    private static ArrayList<Lahter> getColumn(int x, Kast[] difKastid) {
         ArrayList<Lahter> lahtrid = new ArrayList<>();
         for (Kast kast : difKastid) {
             for (Lahter lahter : kast.getLahtrid()) {
@@ -956,7 +930,7 @@ public class Loogika {
         return lahtrid;
     }
 
-    static boolean checkFilled(Game game) {
+    private static boolean checkFilled(Game game) {
         for (Kast kast : game.kastid) {
             for (Lahter lahter : kast.getLahtrid()) {
                 if (lahter.getValue() == 0) {
@@ -967,95 +941,16 @@ public class Loogika {
         return true;
     }
 
-    static boolean checkAll(Kast[] difKastid) {
-        if (!checkAllRows(difKastid)) {
-            return false;
-        }
-        if (!checkAllColumns(difKastid)) {
-            return false;
-        }
-        return checkAllBoxes(difKastid);
-    }
-
-    private static boolean checkAllRows(Kast[] difKastid) {
-        for (int i = 1; i <= dim2; i++) {
-            if (!checkRow(i, difKastid)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static boolean checkAllColumns(Kast[] difKastid) {
-        for (int i = 1; i <= dim2; i++) {
-            if (!checkColumn(i, difKastid)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static boolean checkAllBoxes(Kast[] difKastid) {
-        for (int i = 1; i <= dim2; i++) {
-            if (!checkBox(i, difKastid)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static boolean checkRow(int ind, Kast[] difKastid) {
-        ArrayList<Integer> numbers = new ArrayList<Integer>();
-        for (Lahter lahter : getRow(ind, difKastid)) {
-            if (lahter.getValue() != 0) {
-                if (numbers.contains(lahter.getValue())) {
-                    return false;
-                } else {
-                    numbers.add(lahter.getValue());
-                }
-            }
-        }
-        return true;
-    }
-
-    private static boolean checkColumn(int ind, Kast[] difKastid) {
-        ArrayList<Integer> numbers = new ArrayList<>();
-        for (Lahter lahter : getColumn(ind, difKastid)) {
-            if (lahter.getValue() != 0) {
-                if (numbers.contains(lahter.getValue())) {
-                    return false;
-                } else {
-                    numbers.add(lahter.getValue());
-                }
-            }
-        }
-        return true;
-    }
-
-    private static boolean checkBox(int ind, Kast[] difKastid) {
-        ArrayList<Integer> numbers = new ArrayList<>();
-        for (Lahter lahter : getKast(getXYFromBoxInt(ind), difKastid).getLahtrid()) {
-            if (lahter.getValue() != 0) {
-                if (numbers.contains(lahter.getValue())) {
-                    return false;
-                } else {
-                    numbers.add(lahter.getValue());
-                }
-            }
-        }
-        return true;
-    }
-
-    static ArrayList<int[]> combinations(int sample, int maxLen) {
+    private static ArrayList combinations(int sample, int maxLen) {
         ArrayList results = new ArrayList();
-        return _combsFindNext(new ArrayList(), -1, results, sample, -1, maxLen);
+        return _combsFindNext(new ArrayList<>(), -1, results, sample, -1, maxLen);
     }
 
-    private static ArrayList _combsFindNext(ArrayList last, int lastInt, ArrayList results, int sample, int level, int maxLevel) {
+    private static ArrayList<Integer> _combsFindNext(ArrayList<Integer> last, int lastInt, ArrayList results, int sample, int level, int maxLevel) {
         level++;
         if (level < maxLevel) {
             for (int i = lastInt + 1; i < sample; i++) {
-                ArrayList send = copyList(last);
+                ArrayList<Integer> send = copyList(last);
                 send.add(i);
                 _combsFindNext(send, i, results, sample, level, maxLevel);
             }
@@ -1070,44 +965,25 @@ public class Loogika {
      * @param locY 1-3
      * @return Kast
      */
-    static Kast getKast(int locX, int locY, Kast[] difKastid) {
+    private static Kast getKast(int locX, int locY, Kast[] difKastid) {
         return difKastid[(locY - 1) * dim + locX - 1];
     }
 
-    static Kast getKast(int[] loc, Kast[] difKastid) {
+    private static Kast getKast(int[] loc, Kast[] difKastid) {
         return difKastid[(loc[1] - 1) * dim + loc[0] - 1];
     }
 
-    static Kast getKast(int ind, Kast[] difKastid) {return difKastid[ind-1];}
+    private static Kast getKast(int ind, Kast[] difKastid) {
+        return difKastid[ind - 1];
+    }
 
     /**
      * @param x 1-9
      * @param y 1-9
-     * @return
-     */
-    static Lahter getLahter(int x, int y, Kast[] difKastid) {
-        int[][] locs = getLocsFromXY(x, y);
-        int[] locsKast = locs[0];
-        int[] locsLahter = locs[1];
-        return getKast(locsKast, difKastid).getLahter(locsLahter);
-    }
-
-    /**
-     * @param XY [1-9,1-9]
      * @return lahter
      */
-    static Lahter getLahter(int[] XY, Kast[] difKastid) {
-        int[][] locs = getLocsFromXY(XY[0], XY[1]);
-        int[] locsKast = locs[0];
-        int[] locsLahter = locs[1];
-        return getKast(locsKast, difKastid).getLahter(locsLahter);
-    }
-
-    /**
-     * @param locs [[kastX 1-3, kastY 1-3],[lahterX 1-3, lahterY 1-3]]
-     * @return
-     */
-    static Lahter getLahter(int[][] locs, Kast[] difKastid) {
+    private static Lahter getLahter(int x, int y, Kast[] difKastid) {
+        int[][] locs = getLocsFromXY(x, y);
         int[] locsKast = locs[0];
         int[] locsLahter = locs[1];
         return getKast(locsKast, difKastid).getLahter(locsLahter);
@@ -1117,9 +993,8 @@ public class Loogika {
      * @param val 1-9
      * @return x = 1-3, y = 1-3
      */
-    static int[] getXYFromBoxInt(int val) {
-        int[] retVal = {(val - 1) % dim + 1, (val - 1) / dim + 1};
-        return retVal;
+    private static int[] getXYFromBoxInt(int val) {
+        return new int[]{(val - 1) % dim + 1, (val - 1) / dim + 1};
     }
 
     /**
@@ -1128,7 +1003,7 @@ public class Loogika {
      *            1,     2,     3
      * @return 1-3
      */
-    static int getIntFromLinearInt(int val) {
+    private static int getIntFromLinearInt(int val) {
         return (val - 1) / dim + 1;
     }
 
@@ -1136,9 +1011,9 @@ public class Loogika {
      * @param val 1-9
      *            1 2 3, 4 5 6, 7 8 9
      *            1 2 3, 1 2 3, 1 2 3
-     * @return
+     * @return the modulo
      */
-    static int getModuleFromLinearInt(int val) {
+    private static int getModuleFromLinearInt(int val) {
         return (val - 1) % dim + 1;
     }
 
@@ -1147,7 +1022,7 @@ public class Loogika {
      * @param locs [x 1-dim, y 1-dim]
      * @return 1-dim2
      */
-    static int getIntFromLocalLocs(int[] locs){
+    private static int getIntFromLocalLocs(int[] locs) {
         return (locs[1]-1)*dim + locs[0];
     }
 
@@ -1156,85 +1031,43 @@ public class Loogika {
      * @param y 1-9
      * @return [[kastX 1-3, kastY 1-3],[lahterX 1-3, lahterY 1-3]]
      */
-    static int[][] getLocsFromXY(int x, int y) {
+    private static int[][] getLocsFromXY(int x, int y) {
         int kastX = (x - 1) / dim + 1;
         int kastY = (y - 1) / dim + 1;
         int lahterX = x - (kastX - 1) * dim;
         int lahterY = y - (kastY - 1) * dim;
-        int[][] result = {{kastX, kastY}, {lahterX, lahterY}};
-        return result;
+        return new int[][]{{kastX, kastY}, {lahterX, lahterY}};
     }
 
-    static int[] getXYFromLocs(int[][] locs) {
+    private static int[] getXYFromLocs(int[][] locs) {
         int[] kastXY = locs[0];
         int[] lahterXY = locs[1];
         return new int[]{(kastXY[0] - 1) * dim + lahterXY[0], (kastXY[1] - 1) * dim + lahterXY[1]};
     }
 
-    static void print(Object... o) {
+    private static void print(Object... o) {
         for (Object i : o) {
             System.out.print(i + " ");
         }
     }
 
-    static void println(Object... o) {
+    private static void println(Object... o) {
         for (Object i : o) {
             System.out.print(i + " ");
         }
         newLine();
     }
 
-    static ArrayList arrayToArrayList(Object[] set) {
-        ArrayList list = new ArrayList();
-        for (Object o : set) {
-            list.add(o);
-        }
+    private static ArrayList arrayToArrayList(Object[] set) {
+        ArrayList list = new ArrayList<>();
+        Collections.addAll(list, set);
         return list;
     }
 
-    static ArrayList<Integer> arrayToArrayList(int[] set) {
-        ArrayList<Integer> list = new ArrayList<>();
-        for (int i : set) {
-            list.add(i);
-        }
-        return list;
-    }
-
-    static void newLine() {
+    private static void newLine() {
         System.out.println();
     }
 
-    static void newLine(int a) {
-        for (int i = 0; i < a; i++) {
-            System.out.println();
-        }
-    }
-
-    /**
-     *
-     * @param message information to be written
-     * @param resource the file name
-     */
-    static void write(ArrayList<String> message, String resource) throws FileNotFoundException{
-        try {
-            PrintWriter writer = new PrintWriter(new File(resource));
-            for (String rida : message){
-                writer.write(rida+"\n");
-            }
-        } catch (FileNotFoundException e) {
-            throw e;
-        }
-    }
-
-    /**
-     * to return a
-     * @param a
-     * @param places
-     * @return
-     */
-    static String round(double a, int places){
-        return String.format("%."+Integer.toString(places)+"f", a).replace(",",".");
-    }
 }
 
 
