@@ -1,17 +1,17 @@
+package sudokusolver;
+
 import com.sun.istack.internal.Nullable;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 
 public class Lahter {
 
-    private ArrayList numbers;
-
-    private int value;
     int locX;
     int locY;
     Kast kast;
     String message;
+    private ArrayList numbers;
+    private int value;
 
     /**
      *

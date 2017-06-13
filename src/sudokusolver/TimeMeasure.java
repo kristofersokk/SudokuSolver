@@ -1,6 +1,6 @@
-/**
- * Created by Kristofer on 19/02/2017.
- */
+package sudokusolver;
+
+
 public class TimeMeasure {
 
     private long start = 0;

@@ -1,8 +1,7 @@
+package sudokusolver;
+
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.io.File;
 
 /**
  * Created by Kristofer on 18/02/2017.
@@ -13,7 +12,7 @@ public class FileChooser extends JFrame {
 
     }
 
-     public void openFile() {
+    public void openFile() {
         JFileChooser chooser = new JFileChooser();
         chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
         chooser.setMultiSelectionEnabled(false);
@@ -25,7 +24,7 @@ public class FileChooser extends JFrame {
             System.out.println("Opening canceled");
 
         }
-     }
+    }
 
 
 }

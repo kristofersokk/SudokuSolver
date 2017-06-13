@@ -1,6 +1,5 @@
-/**
- * Created by Kristofer-PC2 on 30/08/2016.
- */
+package sudokusolver;
+
 public class FinishedException extends Exception {
 
     public Game game;
