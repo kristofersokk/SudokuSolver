@@ -1,37 +1,90 @@
 package sudokusolver;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Scanner;
 
 public class Game {
 
-    public Kast[] kastid;
-    public ArrayList<String> messages;
+    Kast[] kastid;
+    ArrayList<String> messages;
+    boolean solved = false;
 
-    public Game() {
+    Game() {
         this.kastid = Loogika.newKastid();
         this.messages = new ArrayList<>();
     }
 
-    public Game(Kast[] kastid, ArrayList<String> messages) {
+    Game(Kast[] kastid, ArrayList<String> messages) {
         this.kastid = kastid;
         this.messages = messages;
     }
 
-    public void importInfo(int stringIndex) {
-        Loogika.loadFromString(this, MainClass.testStrings.get(stringIndex - 1));
+    public static void solveMultipleFromFile(int level, int start, int stop) {
+        File file = new File(MainClass.fileLocation + "level" + level + "-10000.txt");
+        String info = "";
+        try {
+            Scanner scanner = new Scanner(file);
+            int i = 1;
+            while (scanner.hasNextLine()) {
+                info = scanner.nextLine();
+                if (start <= i && i <= stop) {
+                    Game game = new Game();
+                    game.importFromTestString(info);
+                    game.solve();
+                }
+                i++;
+                if (i % 100 == 0) {
+                    Loogika.println(i);
+                }
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
      *
-     * @param file
-     * @param index 1-...
+     * @param level level 1-7
+     * @param index index 1-10000
      */
-    public void importInfo(File file, int index){
-        Loogika.loadFromFile(this, file, index-1);
+    void importFromFile(int level, int index) {
+        File file = new File(MainClass.fileLocation + "level" + level + "-10000.txt");
+        String info = "";
+        try {
+            Scanner scanner = new Scanner(file);
+            int i = 1;
+            while (scanner.hasNextLine()) {
+                info = scanner.nextLine();
+                if (i == index) {
+                    break;
+                } else {
+                    i++;
+                }
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        importFromTestString(info);
     }
 
-    public void solve(){
+    private void importFromTestString(String info) {
+        //TODO add continuous sudoku solver
+        Kast[] kastid = this.kastid;
+        for (int rida = 1; rida <= Loogika.dim2; rida++) {
+            for (int index = 1; index <= Loogika.dim2; index++) {
+                Lahter lahter = Loogika.getLahter(index, rida, kastid);
+                char ch = info.charAt((rida - 1) * Loogika.dim2 + index - 1);
+                if (Character.isDigit(ch) && Integer.parseInt(Character.toString(ch)) > 0) {
+                    lahter.setValue(Integer.parseInt(Character.toString(ch)));
+                }
+            }
+        }
+    }
+
+    void solve() {
         Loogika.startFilling(this);
     }
 }

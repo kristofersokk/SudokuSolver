@@ -16,8 +16,8 @@ public class Loogika {
     static int solutionsAmount = 0;
     static int gamesAmount = 0;
     //settings
-    private static int dim = 3;
-    private static int dim2 = 9;
+    static int dim = 3;
+    static int dim2 = 9;
     private static ArrayList<Game> puzzles = new ArrayList<>();
     private static ArrayList<Game> solutions = new ArrayList<>();
 
@@ -39,6 +39,7 @@ public class Loogika {
             gamesAmount++;
             if (e.filled){
                 solutionsAmount++;
+                solved.solved = true;
             }
         }
     }
@@ -767,97 +768,28 @@ public class Loogika {
         }
     }
 
-    static void printSolutions(){
+    /**
+     * @param printSolutionSteps  --
+     * @param printOnlyUnsolvable --
+     */
+    static void printSolutions(boolean printSolutionSteps, boolean printOnlyUnsolvable) {
         for (int i = 0; i < gamesAmount; i++) {
-            for (String message : solutions.get(i).messages){
-                println(message);
-            }
-            newLine();
-            printSidewaysGrid(puzzles.get(i), solutions.get(i));
-            newLine();
-        }
-    }
-
-    /**
-     *
-     * @param game game
-     * @param sis the input string line by line concatenated
-     */
-    static void loadFromString(Game game, String sis) {
-
-        HashSet<Character> characters = new HashSet<>();
-        characters.add(' ');
-        characters.add('*');
-        characters.add('0');
-
-        for (int i = 1; i <= dim2; i++) {
-            ArrayList<Lahter> lahtrid = getRow(i, game.kastid);
-            for (int j = 0; j < dim2; j++) {
-                Lahter lahter = lahtrid.get(j);
-                String sisString = String.valueOf(sis.charAt((i-1)*dim2+j));
-//                println(sisString);
-                //print(sisString+" ");
-                if (characters.contains(sis.charAt((i-1)*dim2+j))) {//tühi Lahter
-                    lahter.setValue(0);
-                    lahter.setNumbers(getNumberList());
-                } else {//lahtris on number
-                    int intSis = 0;
-                    try {
-                        intSis = Integer.parseInt(sisString);
-                        lahter.setValue(intSis);
-                    } catch (NumberFormatException e) {
-                        char ch = sisString.toLowerCase().charAt(0);
-                        intSis = dim2 + (int) ch - 103;
-                        lahter.setValue(intSis);
+            if (!printOnlyUnsolvable || (printOnlyUnsolvable && !solutions.get(i).solved)) {
+                if (printSolutionSteps) {
+                    for (String message : solutions.get(i).messages) {
+                        println(message);
                     }
-                    lahter.setNumbers(new ArrayList());
                 }
+                newLine();
+                printSidewaysGrid(puzzles.get(i), solutions.get(i));
+                newLine();
             }
         }
     }
 
-    /**
-     *
-     * @param game the game object
-     * @param file the file to be read
-     * @param a the number of lines between sudokus
-     */
-    static void loadFromFile(Game game, File file, int a) {
-
-        ArrayList<String> sudokusString = new ArrayList<>();
-        try {
-            sudokusString = readTextFromFile(file);
-        }catch (FileNotFoundException e){
-            println("File not found");
-            e.printStackTrace();
-        }
-
-        for (int i = 1; i <= dim2; i++) {
-            ArrayList<Lahter> rows = getRow(i, game.kastid);
-            String infoRow = sudokusString.get(i + 10 * a);
-            for (int j = 0; j < dim2; j++) {
-                Lahter lahter = rows.get(j);
-                String sis = String.valueOf(infoRow.charAt(j));
-                //println(sisString+" ");
-                if (sis.contains("0")) {//tühi Lahter
-                    lahter.setNumbers(getNumberList());
-                } else {//lahtris on number
-                    int sisInt;
-                    try {
-                        sisInt = Integer.parseInt(sis);
-                        lahter.setValue(sisInt);
-                    } catch (NumberFormatException e) {
-                        sisInt = dim2 + (int) sis.charAt(0) - 96;
-                        lahter.setValue(sisInt);
-                    }
-                    lahter.setNumbers(new ArrayList());
-                }
-            }
-        }
-    }
 
     /**
-     * @param file for example: /src/50sudokus.txt
+     * @param file for example: /src/level4-10000.txt
      * @return string of contents
      */
     private static ArrayList<String> readTextFromFile(File file) throws FileNotFoundException {
@@ -984,7 +916,7 @@ public class Loogika {
      * @param y 1-9
      * @return lahter
      */
-    private static Lahter getLahter(int x, int y, Kast[] difKastid) {
+    static Lahter getLahter(int x, int y, Kast[] difKastid) {
         int[][] locs = getLocsFromXY(x, y);
         int[] locsKast = locs[0];
         int[] locsLahter = locs[1];
@@ -1053,7 +985,7 @@ public class Loogika {
         }
     }
 
-    private static void println(Object... o) {
+    static void println(Object... o) {
         for (Object i : o) {
             System.out.print(i + " ");
         }
