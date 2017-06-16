@@ -44,6 +44,18 @@ public class Game {
         }
     }
 
+    public static void solveTestString() {
+        Game game = new Game();
+        game.importFromTestString(MainClass.testString);
+        game.solve();
+    }
+
+    public static void solveSudokuFromFile(int level, int index) {
+        Game game = new Game();
+        game.importFromFile(level, index);
+        game.solve();
+    }
+
     /**
      *
      * @param level level 1-7
@@ -70,8 +82,10 @@ public class Game {
         importFromTestString(info);
     }
 
-    private void importFromTestString(String info) {
-        //TODO add continuous sudoku solver
+    /**
+     * @param info line by line
+     */
+    void importFromTestString(String info) {
         Kast[] kastid = this.kastid;
         for (int rida = 1; rida <= Loogika.dim2; rida++) {
             for (int index = 1; index <= Loogika.dim2; index++) {

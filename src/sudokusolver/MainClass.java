@@ -3,9 +3,9 @@ package sudokusolver;
 public class MainClass {
 
 
-    public static final String testString = "8    1  5 1 46 72  9       5      9  2  7  3  4      1       7  36 94 5 4  8    3";
+    public static final String testString = " 6 9  17 5713   69 9 671  87 516 9  68972 4 11 38 97 691 437    5 218 97  7596 1 ";
     public static final String fileLocation = "C:/Users/krist/GitHub projects/SudokuSolver/SudokuSolver/src/sudokusolver/";
-    private static final int level = 6;
+    private static final int level = 1;
     private static final int choice = 3;
     private static final boolean printSolutionSteps = false;
     private static final boolean printOnlySolvable = true;
@@ -60,6 +60,7 @@ public class MainClass {
 //        game.importFromFile(level, choice);
 //        game.solve();
         Game.solveMultipleFromFile(level, 1, 10000);
+//        Game.solveTestString();
 
         measure.stop();
 
