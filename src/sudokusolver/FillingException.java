@@ -5,11 +5,11 @@ package sudokusolver;
  */
 public class FillingException extends Exception {
 
-    public FillingException() {
-    }
+    Game game;
 
-    public FillingException(String message) {
+    FillingException(String message, Game game) {
         super(message);
+        this.game = game;
     }
 
     public FillingException(String message, Throwable cause) {
@@ -19,4 +19,6 @@ public class FillingException extends Exception {
     public FillingException(Throwable cause) {
         super(cause);
     }
+
+
 }

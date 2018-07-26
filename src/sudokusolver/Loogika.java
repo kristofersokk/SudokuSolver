@@ -4,45 +4,21 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Scanner;
+import java.util.*;
 
-public class Loogika {
+class Loogika {
 
     private static final boolean findNextOnes = false;
     private static final boolean sameBoxFirst = true;
     static int solutionsAmount = 0;
     static int gamesAmount = 0;
+    private static final String[] collectionNames = new String[]{"pair", "triplet", "quadruplet", "quintuplet", "sextuplet", "septuplet"};
     //settings
-    static int dim = 3;
-    static int dim2 = 9;
+    static int dim = 4;
     private static ArrayList<Game> puzzles = new ArrayList<>();
     private static ArrayList<Game> solutions = new ArrayList<>();
-
-
-    /**
-     * @param unsolved the original kastid after reading in the information
-     * updates puzzles, solutions, gamesAmount and solutionsAmount
-     */
-    public static void startFilling(Game unsolved){
-        Game solved = copyGame(unsolved);
-        initialLoading(solved);
-        try {
-            continuousFilling(solved);
-        } catch (FillingException e) {
-            e.printStackTrace();
-        } catch (FinishedException e) {
-            puzzles.add(unsolved);
-            solutions.add(solved);
-            gamesAmount++;
-            if (e.filled){
-                solutionsAmount++;
-                solved.solved = true;
-            }
-        }
-    }
+    static int dim2 = 16;
+    public static final ArrayList<Integer> allNumbers = getNumberList();
 
     private static void createAndShowGUI() {
         JFrame frame = new JFrame("Loogika");
@@ -88,9 +64,49 @@ public class Loogika {
         }
     }
 
-    private static void initialLoading(Game game){
-        for (Kast kast : game.kastid){
-            for (Lahter lahter : kast.getLahtrid()){
+    private static int prevLevel = -1;
+    private static int level = 1;
+
+    /**
+     * @param unsolved the original kastid after reading in the information
+     *                 updates puzzles, solutions, gamesAmount and solutionsAmount
+     */
+    static void startFilling(Game unsolved) {
+        Game solved = copyGame(unsolved);
+        initialLoading(solved);
+        println(solved.toString());
+        try {
+            continuousFilling(solved);
+        } catch (FillingException e) {
+            e.printStackTrace();
+            try {
+                Thread.sleep(20);
+            } catch (InterruptedException e1) {
+                e1.printStackTrace();
+            }
+            printSidewaysGrid(unsolved, e.game);
+            for (String message : e.game.messages) {
+                println(message);
+            }
+        } catch (FinishedException e) {
+            puzzles.add(unsolved);
+            solutions.add(solved);
+            gamesAmount++;
+            if (gamesAmount % 1000 == 0)
+                println(gamesAmount);
+            prevLevel = -1;//to print the first logic level
+            if (e.filled) {
+                solutionsAmount++;
+                solved.solved = true;
+            }
+//            println(solved.kastid[0]);
+//            println(solved);
+        }
+    }
+
+    private static void initialLoading(Game game) {
+        for (Box box : game.kastid) {
+            for (Lahter lahter : box.getLahtrid()) {
                 if (lahter.getValue() != 0){
                     afterNumber(lahter, game, false, null, findNextOnes);
                 }
@@ -103,24 +119,25 @@ public class Loogika {
 
         //TODO p''ra ringi, et ta otsiks sama numbrit teistest kastidest enne, siis teisi numbreid
 
+        setLevel(1);
         //box
-
         if (sameBoxFirst){
             int i = 1;
             while (i <= dim2) {
                 somethingDone = false;
-                Kast kast = getKast(i, game.kastid);
-                ArrayList<ArrayList<Integer>> availableSlots = new ArrayList<ArrayList<Integer>>();
-                ArrayList<Lahter> lahtridInBox = arrayToArrayList(kast.getLahtrid());
+                Box box = getKast(i, game);
+                ArrayList<ArrayList<Integer>> availableSlots = new ArrayList<>();
+                ArrayList<Lahter> lahtridInBox = arrayToArrayList(box.getLahtrid());
                 ArrayList<Integer> olemasNumbrid = new ArrayList<>();
                 for (int j = 1; j <= dim2; j++) {
-                    availableSlots.add(new ArrayList<Integer>());
+                    availableSlots.add(new ArrayList<>());
                 }
                 for (int j = 0; j < dim2; j++) {
                     Lahter lahter = lahtridInBox.get(j);
-                    ArrayList<Integer> numbers = lahter.getNumbers();
+                    HashSet numbers = lahter.getNumbers();
                     if (numbers.size() == 0 && lahter.getValue() == 0) {
-                        throw new FillingException();
+                        int[] XY = lahter.getXYOnBoard();
+                        throw new FillingException("lahter at x: " + XY[0] + ", y: " + XY[1] + " is empty and without possibilities", game);
                     }
                 }
                 //get the frequency of possibilities of numbers 1-dim2
@@ -131,67 +148,69 @@ public class Loogika {
                     }
                     olemasNumbrid.add(lahter.getValue());
                 }
-                //check the different numbers and the number of the possibilities
+                //check the different numbers and the number of possibilities
                 for (int j = 0; j < dim2; j++) {
                     ArrayList<Integer> arvud = availableSlots.get(j);
                     if (arvud.size() > 0 && olemasNumbrid.contains(j + 1)) {
-                        throw new FillingException();
+                        throw new FillingException("box " + i + " already has number " + (j + 1) + ", but possibilities exist", game);
                     }
                     if (arvud.size() == 1) {
-                        Lahter lahter = kast.getLahtrid()[arvud.get(0) - 1];
+                        Lahter lahter = box.getLahtrid()[arvud.get(0) - 1];
                         lahter.setValue(j + 1);
-                        afterNumber(lahter, game, true, " (box " + getIntFromLocalLocs(new int[]{kast.locX, kast.locY}) + ")", findNextOnes);
+                        afterNumber(lahter, game, true, " (box " + i + ")", findNextOnes);
                         somethingDone = true;
 //                    println("box",j+1);
                     } else if (arvud.size() == 0 && !olemasNumbrid.contains(j + 1)) {
-                        throw new FillingException();
+                        throw new FillingException("box " + i + " doesn't have number " + (j + 1) + " and no possibilities exist", game);
                     }
                 }
                 if (!somethingDone){
                     i++;
                 }
             }
-        }else{
-            for (Kast kast : game.kastid) {
-                ArrayList<ArrayList<Integer>> availableSlots = new ArrayList<>();
-                ArrayList<Lahter> lahtridInBox = arrayToArrayList(kast.getLahtrid());
-                ArrayList<Integer> olemasNumbrid = new ArrayList<>();
-                for (int j = 1; j <= dim2; j++) {
-                    availableSlots.add(new ArrayList<Integer>());
-                }
-                for (int j = 0; j < dim2; j++) {
-                    Lahter lahter = lahtridInBox.get(j);
-                    ArrayList<Integer> numbers = lahter.getNumbers();
-                    if (numbers.size() == 0 && lahter.getValue() == 0) {
-                        throw new FillingException();
-                    }
-                }
-                //get the frequency of possibilities of numbers 1-dim2
-                for (int j = 0; j < dim2; j++) {
-                    Lahter lahter = lahtridInBox.get(j);
-                    for (int a : lahter.getNumbers()) {
-                        availableSlots.get(a - 1).add(j + 1);
-                    }
-                    olemasNumbrid.add(lahter.getValue());
-                }
-                //check the different numbers and the number of the possibilities
-                for (int j = 0; j < dim2; j++) {
-                    ArrayList<Integer> arvud = availableSlots.get(j);
-                    if (arvud.size() > 0 && olemasNumbrid.contains(j + 1)) {
-                        throw new FillingException();
-                    }
-                    if (arvud.size() == 1) {
-                        Lahter lahter = kast.getLahtrid()[arvud.get(0) - 1];
-                        lahter.setValue(j + 1);
-                        afterNumber(lahter, game, true, " (box " + getIntFromLocalLocs(new int[]{kast.locX, kast.locY}) + ")", findNextOnes);
-                        return true;
-//                    println("box",j+1);
-                    } else if (arvud.size() == 0 && !olemasNumbrid.contains(j + 1)) {
-                        throw new FillingException();
-                    }
-                }
-            }
         }
+//        else {
+//            for (Box box : game.kastid) {
+//                ArrayList<ArrayList<Integer>> availableSlots = new ArrayList<>();
+//                ArrayList<Lahter> lahtridInBox = arrayToArrayList(box.getLahtrid());
+//                ArrayList<Integer> olemasNumbrid = new ArrayList<>();
+//                for (int j = 1; j <= dim2; j++) {
+//                    availableSlots.add(new ArrayList<Integer>());
+//                }
+//                for (int j = 0; j < dim2; j++) {
+//                    Lahter lahter = lahtridInBox.get(j);
+//                    HashSet numbers = lahter.getNumbers();
+//                    if (numbers.size() == 0 && lahter.getValue() == 0) {
+//                        int[] XY = lahter.getXYOnBoard();
+//                        throw new FillingException("lahter at x: " + XY[0] + ", y: " + XY[1] + " is empty and without possibilities", game);
+//                    }
+//                }
+//                //get the frequency of possibilities of numbers 1-dim2
+//                for (int j = 0; j < dim2; j++) {
+//                    Lahter lahter = lahtridInBox.get(j);
+//                    for (int a : lahter.getNumbers()) {
+//                        availableSlots.get(a - 1).add(j + 1);
+//                    }
+//                    olemasNumbrid.add(lahter.getValue());
+//                }
+//                //check the different numbers and the number of the possibilities
+//                for (int j = 0; j < dim2; j++) {
+//                    ArrayList<Integer> arvud = availableSlots.get(j);
+//                    if (arvud.size() > 0 && olemasNumbrid.contains(j + 1)) {
+//                        throw new FillingException("box " + getIntFromLocalLocs(new int[]{box.locX, box.locY}) + " already has number " + (j + 1) + ", but possibilities exist", game);
+//                    }
+//                    if (arvud.size() == 1) {
+//                        Lahter lahter = box.getLahtrid()[arvud.get(0) - 1];
+//                        lahter.setValue(j + 1);
+//                        afterNumber(lahter, game, true, " (box " + getIntFromLocalLocs(new int[]{box.locX, box.locY}) + ")", findNextOnes);
+//                        return true;
+////                    println("box",j+1);
+//                    } else if (arvud.size() == 0 && !olemasNumbrid.contains(j + 1)) {
+//                        throw new FillingException("box " + getIntFromLocalLocs(new int[]{box.locX, box.locY}) + " doesn't have number " + (j + 1) + " and no possibilities exist", game);
+//                    }
+//                }
+//            }
+//        }
 
         if (somethingDone){
             return true;
@@ -200,16 +219,17 @@ public class Loogika {
         //rows
         for (int row = 1; row <= dim2; row++) {
             ArrayList<ArrayList<Integer>> availableSlots = new ArrayList<ArrayList<Integer>>();
-            ArrayList<Lahter> lahtridInRow = getRow(row, game.kastid);
+            ArrayList<Lahter> lahtridInRow = getRow(row, game);
             ArrayList<Integer> olemasNumbrid = new ArrayList<>();
             for (int j = 1; j <= dim2; j++) {
                 availableSlots.add(new ArrayList<Integer>());
             }
             for (int j = 0; j < dim2; j++) {
                 Lahter lahter = lahtridInRow.get(j);
-                ArrayList<Integer> numbers = lahter.getNumbers();
+                HashSet numbers = lahter.getNumbers();
                 if (numbers.size() == 0 && lahter.getValue() == 0) {
-                    throw new FillingException();
+                    int[] XY = lahter.getXYOnBoard();
+                    throw new FillingException("lahter at x: " + XY[0] + ", y: " + XY[1] + " is empty and without possibilities", game);
                 }
             }
             //get the frequency of possibilities of numbers 1-dim2
@@ -224,35 +244,36 @@ public class Loogika {
             for (int j = 0; j < dim2; j++) {
                 ArrayList<Integer> arvud = availableSlots.get(j);
                 if (arvud.size() > 0 && olemasNumbrid.contains(j + 1)) {
-                    throw new FillingException();
+                    throw new FillingException("row " + row + " already has number " + (j + 1) + ", but possibilities exist", game);
                 }
                 if (arvud.size() == 1) {
-                    Lahter lahter = getLahter(arvud.get(0), row, game.kastid);
+                    Lahter lahter = getLahter(arvud.get(0), row, game);
                     lahter.setValue(j + 1);
                     afterNumber(lahter, game, true, " (row " + row + ")", findNextOnes);
                     return true;
 //                    println("row",j+1);
                 } else if (arvud.size() == 0 && !olemasNumbrid.contains(j + 1)) {
-                    println(row, arvud.toString(), j + 1, olemasNumbrid.toString());
-                    throw new FillingException();
+                    throw new FillingException("row " + row + " doesn't have number " + (j + 1) + " and no possibilities exist", game);
                 }
             }
 
         }
 
+
         //columns
         for (int column = 1; column <= dim2; column++) {
             ArrayList<ArrayList<Integer>> availableSlots = new ArrayList<ArrayList<Integer>>();
-            ArrayList<Lahter> lahtridInColumn = getColumn(column, game.kastid);
+            ArrayList<Lahter> lahtridInColumn = getColumn(column, game);
             ArrayList<Integer> olemasNumbrid = new ArrayList<>();
             for (int j = 1; j <= dim2; j++) {
                 availableSlots.add(new ArrayList<Integer>());
             }
             for (int j = 0; j < dim2; j++) {
                 Lahter lahter = lahtridInColumn.get(j);
-                ArrayList<Integer> numbers = lahter.getNumbers();
+                HashSet numbers = lahter.getNumbers();
                 if (numbers.size() == 0 && lahter.getValue() == 0) {
-                    throw new FillingException();
+                    int[] XY = lahter.getXYOnBoard();
+                    throw new FillingException("lahter at x: " + XY[0] + ", y: " + XY[1] + " is empty and without possibilities", game);
                 }
             }
             //get the frequency of possibilities of numbers 1-dim2
@@ -267,36 +288,16 @@ public class Loogika {
             for (int j = 0; j < dim2; j++) {
                 ArrayList<Integer> arvud = availableSlots.get(j);
                 if (arvud.size() > 0 && olemasNumbrid.contains(j + 1)) {
-                    throw new FillingException();
+                    throw new FillingException("column " + column + " already has number " + (j + 1) + ", but possibilities exist", game);
                 }
                 if (arvud.size() == 1) {
-                    Lahter lahter = getLahter(column, arvud.get(0), game.kastid);
+                    Lahter lahter = getLahter(column, arvud.get(0), game);
                     lahter.setValue(j + 1);
                     afterNumber(lahter, game, true, " (column " + column + ")", findNextOnes);
                     return true;
 //                    println("column",j+1);
                 } else if (arvud.size() == 0 && !olemasNumbrid.contains(j + 1)) {
-                    throw new FillingException();
-                }
-            }
-        }
-
-        return somethingDone;
-    }
-
-    private static boolean filling1(Game game) throws FillingException {
-        boolean somethingDone = false;
-
-        for (Kast kast : game.kastid){
-            for (Lahter lahter : kast.getLahtrid()){
-                ArrayList<Integer> numbers = lahter.getNumbers();
-                if (numbers.size() == 0 && lahter.getValue() == 0) {
-                    throw new FillingException();
-                } else if (numbers.size() == 1) {
-                    lahter.setValue(numbers.get(0));
-                    numbers.clear();
-                    afterNumber(lahter, game, true, " (only choice)", findNextOnes);
-                    return true;
+                    throw new FillingException("column " + column + " doesn't have number " + (j + 1) + " and no possibilities exist", game);
                 }
             }
         }
@@ -304,24 +305,46 @@ public class Loogika {
         return false;
     }
 
+    private static boolean filling1(Game game) throws FillingException {
+
+        setLevel(1);
+
+        for (Box box : game.kastid) {
+            for (Lahter lahter : box.getLahtrid()) {
+                HashSet<Integer> numbers = lahter.getNumbers();
+                if (numbers.size() == 0 && lahter.getValue() == 0) {
+                    int[] XY = lahter.getXYOnBoard();
+                    throw new FillingException("lahter at x: " + XY[0] + ", y: " + XY[1] + " is empty and without possibilities", game);
+                } else if (numbers.size() == 1) {
+                    lahter.setValue((int) numbers.toArray()[0]);
+                    numbers.clear();
+                    afterNumber(lahter, game, true, " (only choice)", findNextOnes);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private static boolean filling2(Game game) throws FillingException {
         boolean somethingDone = false;
 
-        game.messages.add("logic level 2");
+        setLevel(2);
 
         //box
-        for (Kast kast : game.kastid) {
+        for (Box box : game.kastid) {
             ArrayList<ArrayList<Integer>> availableSlots = new ArrayList<>();
-            ArrayList<Lahter> lahtridInBox = arrayToArrayList(kast.getLahtrid());
+            ArrayList<Lahter> lahtridInBox = arrayToArrayList(box.getLahtrid());
             ArrayList<Integer> olemasNumbrid = new ArrayList<>();
             for (int j = 1; j <= dim2; j++) {
                 availableSlots.add(new ArrayList<>());
             }
             for (int j = 0; j < dim2; j++) {
                 Lahter lahter = lahtridInBox.get(j);
-                ArrayList<Integer> numbers = lahter.getNumbers();
+                HashSet numbers = lahter.getNumbers();
                 if (numbers.size() == 0 && lahter.getValue() == 0) {
-                    throw new FillingException();
+                    int[] XY = lahter.getXYOnBoard();
+                    throw new FillingException("lahter at x: " + XY[0] + ", y: " + XY[1] + " is empty and without possibilities", game);
                 }
             }
             //get the frequency of possibilities of numbers 1-dim2
@@ -336,7 +359,7 @@ public class Loogika {
             for (int j = 0; j < dim2; j++) {
                 ArrayList<Integer> arvud = availableSlots.get(j);
                 if (arvud.size() > 0 && olemasNumbrid.contains(j + 1)) {
-                    throw new FillingException();
+                    throw new FillingException("box " + getIntFromLocalLocs(new int[]{box.locX, box.locY}) + " already has number " + (j + 1) + ", but possibilities exist", game);
                 }
                 if (arvud.size() >= 2 && arvud.size() <= dim) {
 
@@ -348,16 +371,16 @@ public class Loogika {
                     // candidate line (row) is active
                     if (moduleRow.size() == 1) {
                         ArrayList<Integer> moduleList = new ArrayList<>(moduleRow);
-                        for (Lahter lahter : getRow((kast.locY - 1) * dim + moduleList.get(0), game.kastid)) {
-                            if (lahter.kast != kast) {
+                        for (Lahter lahter : getRow((box.locY - 1) * dim + moduleList.get(0), game)) {
+                            if (lahter.box != box) {
                                 if (lahter.getNumbers().remove((Integer) (j + 1))) {
                                     somethingDone = true;
-//                                    println("vs3 row", (kast.locY-1)*3+moduleList.get(0));
+//                                    println("vs3 row", (box.locY-1)*3+moduleList.get(0));
                                 }
                             }
                         }
-                        if (somethingDone){
-                            game.messages.add("row " + ((kast.locY - 1) * dim + moduleList.get(0)) + ": "+ (j+1));
+                        if (somethingDone) {
+                            addMessage(game, "row " + ((box.locY - 1) * dim + moduleList.get(0)) + ": " + (j + 1));
                             return true;
                         }
                     }
@@ -369,16 +392,16 @@ public class Loogika {
                     // candidate line (column) is active
                     if (moduleColumn.size() == 1) {
                         ArrayList<Integer> moduleList = new ArrayList<>(moduleColumn);
-                        for (Lahter lahter : getColumn((kast.locX - 1) * dim + moduleList.get(0), game.kastid)) {
-                            if (lahter.kast != kast) {
-                                if (lahter.getNumbers().remove((Integer) (j + 1))) {
+                        for (Lahter lahter : getColumn((box.locX - 1) * dim + moduleList.get(0), game)) {
+                            if (lahter.box != box) {
+                                if (lahter.getNumbers().remove(j + 1)) {
                                     somethingDone = true;
-//                                    println("vs3 column", (kast.locX-1)*3+moduleList.get(0));
+//                                    println("vs3 column", (box.locX-1)*3+moduleList.get(0));
                                 }
                             }
                         }
-                        if (somethingDone){
-                            game.messages.add("column " + ((kast.locX - 1) * dim + moduleList.get(0)) + ": " + (j + 1));
+                        if (somethingDone) {
+                            addMessage(game, "column " + ((box.locX - 1) * dim + moduleList.get(0)) + ": " + (j + 1));
                             return true;
                         }
                     }
@@ -389,16 +412,17 @@ public class Loogika {
         //rows
         for (int row = 1; row <= dim2; row++) {
             ArrayList<ArrayList<Integer>> availableSlots = new ArrayList<>();
-            ArrayList<Lahter> lahtridInRow = getRow(row, game.kastid);
+            ArrayList<Lahter> lahtridInRow = getRow(row, game);
             ArrayList<Integer> olemasNumbrid = new ArrayList<>();
             for (int j = 1; j <= dim2; j++) {
                 availableSlots.add(new ArrayList<>());
             }
             for (int j = 0; j < dim2; j++) {
                 Lahter lahter = lahtridInRow.get(j);
-                ArrayList<Integer> numbers = lahter.getNumbers();
+                HashSet numbers = lahter.getNumbers();
                 if (numbers.size() == 0 && lahter.getValue() == 0) {
-                    throw new FillingException();
+                    int[] XY = lahter.getXYOnBoard();
+                    throw new FillingException("lahter at x: " + XY[0] + ", y: " + XY[1] + " is empty and without possibilities", game);
                 }
             }
             //get the frequency of possibilities of numbers 1-dim2
@@ -413,26 +437,26 @@ public class Loogika {
             for (int j = 0; j < dim2; j++) {
                 ArrayList<Integer> arvud = availableSlots.get(j);
                 if (arvud.size() > 0 && olemasNumbrid.contains(j + 1)) {
-                    throw new FillingException();
+                    throw new FillingException("row " + row + " already has number " + (j + 1) + ", but possibilities exist", game);
                 }
                 if (arvud.size() >= 2 && arvud.size() <= dim) {
                     HashSet<Integer> module = new HashSet<>();
                     for (int arv : arvud) {
                         module.add(getIntFromLinearInt(arv));
                     }
-                    // multiple lines is active
+                    // multiple lines is active, one number in a row resides in one box
                     if (module.size() == 1) {
                         ArrayList<Integer> moduleList = new ArrayList<>(module);
-                        for (Lahter lahter : getKast(moduleList.get(0), getIntFromLinearInt(row), game.kastid).getLahtrid()) {
+                        for (Lahter lahter : getKast(moduleList.get(0), getIntFromLinearInt(row), game).getLahtrid()) {
                             if (lahter.locY != getModuleFromLinearInt(row)) {
-                                if (lahter.getNumbers().remove((Integer) (j + 1))) {
+                                if (lahter.getNumbers().remove(j + 1)) {
                                     somethingDone = true;
 //                                    println("vs4 row", j+1);
                                 }
                             }
                         }
-                        if (somethingDone){
-                            game.messages.add("row " + row + ": "+ (j+1));
+                        if (somethingDone) {
+                            addMessage(game, "row " + row + ": " + (j + 1));
                             return true;
                         }
                     }
@@ -443,16 +467,17 @@ public class Loogika {
         //columns
         for (int column = 1; column <= dim2; column++) {
             ArrayList<ArrayList<Integer>> availableSlots = new ArrayList<>();
-            ArrayList<Lahter> lahtridInColumn = getColumn(column, game.kastid);
+            ArrayList<Lahter> lahtridInColumn = getColumn(column, game);
             ArrayList<Integer> olemasNumbrid = new ArrayList<>();
             for (int j = 1; j <= dim2; j++) {
                 availableSlots.add(new ArrayList<>());
             }
             for (int j = 0; j < dim2; j++) {
                 Lahter lahter = lahtridInColumn.get(j);
-                ArrayList<Integer> numbers = lahter.getNumbers();
+                HashSet numbers = lahter.getNumbers();
                 if (numbers.size() == 0 && lahter.getValue() == 0) {
-                    throw new FillingException();
+                    int[] XY = lahter.getXYOnBoard();
+                    throw new FillingException("lahter at x: " + XY[0] + ", y: " + XY[1] + " is empty and without possibilities", game);
                 }
             }
             //get the frequency of possibilities of numbers 1-dim2
@@ -467,7 +492,7 @@ public class Loogika {
             for (int j = 0; j < dim2; j++) {
                 ArrayList<Integer> arvud = availableSlots.get(j);
                 if (arvud.size() > 0 && olemasNumbrid.contains(j + 1)) {
-                    throw new FillingException();
+                    throw new FillingException("column " + column + " already has number " + (j + 1) + ", but possibilities exist", game);
                 }
                 if (arvud.size() >= 2 && arvud.size() <= dim) {
                     HashSet<Integer> module = new HashSet<>();
@@ -477,17 +502,17 @@ public class Loogika {
                     //multiple lines is active
                     if (module.size() == 1) {
                         ArrayList<Integer> moduleList = new ArrayList<Integer>(module);
-                        for (Lahter lahter : getKast(getIntFromLinearInt(column), moduleList.get(0), game.kastid).getLahtrid()) {
+                        for (Lahter lahter : getKast(getIntFromLinearInt(column), moduleList.get(0), game).getLahtrid()) {
                             if (lahter.locX != getModuleFromLinearInt(column)) {
-                                if (lahter.getNumbers().remove((Integer) (j + 1))) {
+                                if (lahter.getNumbers().remove(j + 1)) {
                                     somethingDone = true;
 //                                    println("vs4 column", j+1);
                                 }
                             }
                         }
-                        if (somethingDone){
-                            game.messages.add("column " + column + ": "+ (j+1));
-                            return somethingDone;
+                        if (somethingDone) {
+                            addMessage(game, "column " + column + ": " + (j + 1));
+                            return true;
                         }
                     }
                 }
@@ -497,24 +522,174 @@ public class Loogika {
         return false;
     }
 
-    private static boolean filling3(Game game) throws FillingException {
-        boolean somethingDone = false;
+    private static String getCollectionName(int a) {
+        return a <= collectionNames.length + 1 ? collectionNames[a - 2] : a + "-uplet";
+    }
 
-        game.messages.add("logic level 3");
+    private static boolean filling3(Game game) {
+        boolean somethingDone = false;
 
         //naked and hidden pairs, triplets, quarters
 
-        //rows
-        for (int row = 1; row <= dim2; row++) {
-            ArrayList<Lahter> lahtridInRow = getRow(row, game.kastid);
+        setLevel(3);
+
+        //box
+        for (Box box : game.kastid) {
+            ArrayList<Lahter> lahtridInBox = arrayToArrayList(box.getLahtrid());
             ArrayList<Lahter> emptyLahtrid = new ArrayList<>();
-            for (Lahter lahter : lahtridInRow) {
-                if (lahter.getValue() != 0) {
+            for (Lahter lahter : lahtridInBox) {
+                if (lahter.getValue() == 0) {
                     emptyLahtrid.add(lahter);
                 }
             }
-            if (emptyLahtrid.size()>2){
-                for (int i = 2; i < dim2 ; i++){
+            if (emptyLahtrid.size() > 3) {
+
+                //naked
+                for (int i = 2; i <= Math.ceil(emptyLahtrid.size() / 2); i++) {
+                    combinations:
+                    for (Object a : combinations(emptyLahtrid.size(), i)) {
+                        //you've got the combinations, what now?
+                        ArrayList<Lahter> chosenOnes = new ArrayList<>();
+                        for (int index : (ArrayList<Integer>) a) {
+                            chosenOnes.add(emptyLahtrid.get(index));
+                        }
+                        //finding naked pairs, triplets, ...
+                        HashSet<Integer> numbers = new HashSet<>();
+                        for (Lahter lahter : chosenOnes) {
+                            for (int index : lahter.getNumbers()) {
+                                numbers.add(index);
+                                if (numbers.size() > i) {
+                                    //not a hidden pair
+                                    continue combinations;
+                                }
+                            }
+                        }
+                        //remove the numbers from the other lahtrid in the same box
+                        lahtrid:
+                        for (Lahter lahter : emptyLahtrid) {
+                            for (Lahter lahter1 : chosenOnes) {
+                                if (lahter.equals(lahter1)) {
+                                    continue lahtrid;
+                                }
+                            }
+                            for (int usedNumber : numbers) {
+                                if (lahter.getNumbers().remove(usedNumber)) {
+                                    somethingDone = true;
+                                }
+                            }
+                        }
+                        //TODO check if in a row or a column
+
+                        if (somethingDone) {
+                            addMessage(game, "box " + String.valueOf(getIntFromLocalLocs(new int[]{box.locX, box.locY})) + ": naked " + getCollectionName(i) + " with numbers " + numbers.toString());
+                            return true;
+                        }
+                    }
+                }
+
+                //hidden
+
+                //get unfilled numbers
+                HashSet unfillednumbers = getNumberSet();
+                for (Lahter lahter : box.getLahtrid()) {
+                    unfillednumbers.remove(lahter.getValue());
+                }
+
+                ArrayList<ArrayList<Integer>> numberscontainedinlahters = new ArrayList();
+                for (int i = 0; i < dim2; i++) {
+                    numberscontainedinlahters.add(new ArrayList<>());
+                }
+
+                for (int index = 0; index < emptyLahtrid.size(); index++) {
+                    Lahter lahter = emptyLahtrid.get(index);
+                    if (lahter.getValue() == 0) {
+                        for (int numbrid : lahter.getNumbers()) {
+                            numberscontainedinlahters.get(numbrid - 1).add(index);
+                        }
+                    }
+                }
+                ArrayList<Integer> numberlist = getNumberList();
+
+                //removes unneeded empty lists (of those numbers that are already filled)
+                int b = 0;
+                while (b < numberscontainedinlahters.size()) {
+                    if (numberscontainedinlahters.get(b).isEmpty()) {
+                        numberscontainedinlahters.remove(b);
+                        numberlist.remove(b);
+                    } else {
+                        b++;
+                    }
+                }
+
+                //taking combinations of fillable numbers and analyzing if total lahters needed by them is more than the amount of numbers being analyzed
+                for (int i = 2; i < Math.ceil(emptyLahtrid.size() / 2); i++) {
+                    for (Object a : combinations(unfillednumbers.size(), i)) {
+                        //you've got the combinations, what now?
+                        ArrayList<Integer> chosenOnesIndexes = new ArrayList<>((ArrayList<Integer>) a);
+
+                        //collecting lahters needed
+                        HashSet<Integer> chosenLahtersIndexes = new HashSet<>();
+                        for (int query : chosenOnesIndexes)
+                            chosenLahtersIndexes.addAll(numberscontainedinlahters.get(query));
+                        //not a hidden pair, triplet,...
+                        if (chosenLahtersIndexes.size() > chosenOnesIndexes.size())
+                            continue;
+
+                        ArrayList<Lahter> chosenLahtrid = new ArrayList<>();
+                        for (int index : chosenLahtersIndexes)
+                            chosenLahtrid.add(emptyLahtrid.get(index));
+
+                        HashSet<Integer> chosenOnes = new HashSet();
+                        for (int arv : chosenOnesIndexes)
+                            chosenOnes.add(numberlist.get(arv));
+
+
+                        //remove other numbers from chosen lahters
+                        for (Lahter lahter : chosenLahtrid) {
+                            for (int arv : allNumbers)
+                                if (!chosenOnes.contains(arv))
+                                    if (lahter.getNumbers().remove(arv))
+                                        somethingDone = true;
+
+                        }
+
+                        //TODO add check if inside a row or a column
+
+                        //remove the numbers from the other lahtrid in the same row
+                        lahtrid:
+                        for (Lahter lahter : emptyLahtrid) {
+                            for (Lahter lahter1 : chosenLahtrid) {
+                                if (lahter.equals(lahter1))
+                                    continue lahtrid;
+                            }
+                            for (int usedNumber : chosenOnes)
+                                if (lahter.getNumbers().remove(usedNumber))
+                                    somethingDone = true;
+                        }
+                        if (somethingDone) {
+                            addMessage(game, "box " + String.valueOf(getIntFromLocalLocs(new int[]{box.locX, box.locY})) + ": hidden " + getCollectionName(i) + " with numbers " + chosenOnes.toString());
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        //TODO add puzzle level to the game, after that use filtering to filter out more complex
+
+        //rows
+        for (int row = 1; row <= dim2; row++) {
+            ArrayList<Lahter> lahtridInRow = getRow(row, game);
+            ArrayList<Lahter> emptyLahtrid = new ArrayList<>();
+            for (Lahter lahter : lahtridInRow) {
+                if (lahter.getValue() == 0) {
+                    emptyLahtrid.add(lahter);
+                }
+            }
+            if (emptyLahtrid.size() > 3) {
+
+                //naked
+                for (int i = 2; i <= Math.ceil(emptyLahtrid.size() / 2); i++) {
                     combinations:
                     for (Object a : combinations(emptyLahtrid.size(),i)){
                         //you've got the combinations, what now?
@@ -541,83 +716,120 @@ public class Loogika {
                                     continue lahtrid;
                                 }
                             }
-                            for (int usedNumber : numbers){
-                                if (lahter.getNumbers().remove((Integer) usedNumber)) {
+                            for (int usedNumber : numbers) {
+                                if (lahter.getNumbers().remove(usedNumber)) {
                                     somethingDone = true;
                                 }
                             }
                         }
-                        if (somethingDone){
+                        if (somethingDone) {
+                            addMessage(game, "row " + row + ": naked " + getCollectionName(i) + " with numbers " + numbers.toString());
                             return true;
                         }
                     }
+                }
+                //hidden
 
+                //get unfilled numbers
+                HashSet unfillednumbers = getNumberSet();
+                for (Lahter lahter : getRow(row, game)) {
+                    unfillednumbers.remove(lahter.getValue());
+                }
+
+                ArrayList<ArrayList<Integer>> numberscontainedinlahters = new ArrayList();
+                for (int i = 0; i < dim2; i++) {
+                    numberscontainedinlahters.add(new ArrayList<Integer>());
+                }
+
+                for (int index = 0; index < emptyLahtrid.size(); index++) {
+                    Lahter lahter = emptyLahtrid.get(index);
+                    if (lahter.getValue() == 0) {
+                        for (int numbrid : lahter.getNumbers()) {
+                            numberscontainedinlahters.get(numbrid - 1).add(index);
+                        }
+                    }
+                }
+                ArrayList<Integer> numberlist = getNumberList();
+
+                //removes unneeded empty lists (of those numbers that are already filled)
+                int b = 0;
+                while (b < numberscontainedinlahters.size()) {
+                    if (numberscontainedinlahters.get(b).isEmpty()) {
+                        numberscontainedinlahters.remove(b);
+                        numberlist.remove(b);
+                    } else {
+                        b++;
+                    }
+                }
+
+                //taking combinations of fillable numbers and analyzing if total lahters needed by them is more than the amount of numbers being analyzed
+                for (int i = 2; i < Math.ceil(emptyLahtrid.size() / 2); i++) {
+                    for (Object a : combinations(unfillednumbers.size(), i)) {
+                        //you've got the combinations, what now?
+                        ArrayList<Integer> chosenOnesIndexes = new ArrayList<>((ArrayList<Integer>) a);
+
+                        //collecting lahters needed
+                        HashSet<Integer> chosenLahtersIndexes = new HashSet<>();
+                        for (int query : chosenOnesIndexes)
+                            chosenLahtersIndexes.addAll(numberscontainedinlahters.get(query));
+                        //not a hidden pair, triplet,...
+                        if (chosenLahtersIndexes.size() > chosenOnesIndexes.size())
+                            continue;
+
+                        ArrayList<Lahter> chosenLahtrid = new ArrayList<>();
+                        for (int index : chosenLahtersIndexes)
+                            chosenLahtrid.add(emptyLahtrid.get(index));
+
+                        HashSet<Integer> chosenOnes = new HashSet();
+                        for (int arv : chosenOnesIndexes)
+                            chosenOnes.add(numberlist.get(arv));
+
+
+                        //remove other numbers from chosen lahters
+                        for (Lahter lahter : chosenLahtrid) {
+                            for (int arv : allNumbers)
+                                if (!chosenOnes.contains(arv))
+                                    if (lahter.getNumbers().remove(arv))
+                                        somethingDone = true;
+
+                        }
+
+                        //remove the numbers from the other lahtrid in the same row
+                        lahtrid:
+                        for (Lahter lahter : emptyLahtrid) {
+                            for (Lahter lahter1 : chosenLahtrid) {
+                                if (lahter.equals(lahter1))
+                                    continue lahtrid;
+                            }
+                            for (int usedNumber : chosenOnes)
+                                if (lahter.getNumbers().remove(usedNumber))
+                                    somethingDone = true;
+                        }
+
+                        //TODO check if inside a box
+
+                        if (somethingDone) {
+                            addMessage(game, "row " + String.valueOf(row) + ": hidden " + getCollectionName(i) + " with numbers " + chosenOnes.toString());
+                            return true;
+                        }
+                    }
                 }
             }
         }
 
         //columns
         for (int column = 1; column <= dim2; column++) {
-            ArrayList<Lahter> lahtridInColumn = getColumn(column, game.kastid);
+            ArrayList<Lahter> lahtridInColumn = getColumn(column, game);
             ArrayList<Lahter> emptyLahtrid = new ArrayList<>();
             for (Lahter lahter : lahtridInColumn) {
-                if (lahter.getValue() != 0) {
+                if (lahter.getValue() == 0) {
                     emptyLahtrid.add(lahter);
                 }
             }
-            if (emptyLahtrid.size()>2){
-                for (int i = 2; i < dim2 ; i++){
-                    combinations:
-                    for (Object a : combinations(emptyLahtrid.size(),i)){
-                        //you've got the combinations, what now?
-                        ArrayList<Lahter> chosenOnes = new ArrayList<>();
-                        for (int index : (ArrayList<Integer>)a){
-                            chosenOnes.add(emptyLahtrid.get(index));
-                        }
-                        //finding naked pairs, triplets, ...
-                        HashSet<Integer> numbers = new HashSet<>();
-                        for (Lahter lahter : chosenOnes){
-                            for (int index : lahter.getNumbers()){
-                                numbers.add(index);
-                                if (numbers.size()>i){
-                                    //not a hidden pair
-                                    continue combinations;
-                                }
-                            }
-                        }
-                        //remove the numbers from the other lahtrid in the same row
-                        lahtrid:
-                        for (Lahter lahter : emptyLahtrid){
-                            for (Lahter lahter1 : chosenOnes){
-                                if (lahter.equals(lahter1)){
-                                    continue lahtrid;
-                                }
-                            }
-                            for (int usedNumber : numbers){
-                                if (lahter.getNumbers().remove((Integer) usedNumber)) {
-                                    somethingDone = true;
-                                }
-                            }
-                        }
-                        if (somethingDone){
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
+            if (emptyLahtrid.size() > 3) {
 
-        //box
-        for (Kast kast : game.kastid) {
-            ArrayList<Lahter> lahtridInBox = arrayToArrayList(kast.getLahtrid());
-            ArrayList<Lahter> emptyLahtrid = new ArrayList<>();
-            for (Lahter lahter : lahtridInBox) {
-                if (lahter.getValue() != 0) {
-                    emptyLahtrid.add(lahter);
-                }
-            }
-            if (emptyLahtrid.size()>2) {
-                for (int i = 2; i < dim2; i++) {
+                //naked
+                for (int i = 2; i <= Math.ceil(emptyLahtrid.size() / 2); i++) {
                     combinations:
                     for (Object a : combinations(emptyLahtrid.size(), i)) {
                         //you've got the combinations, what now?
@@ -645,12 +857,98 @@ public class Loogika {
                                 }
                             }
                             for (int usedNumber : numbers) {
-                                if (lahter.getNumbers().remove((Integer) usedNumber)) {
+                                if (lahter.getNumbers().remove(usedNumber)) {
                                     somethingDone = true;
                                 }
                             }
                         }
                         if (somethingDone) {
+                            addMessage(game, "column " + column + ": naked " + getCollectionName(i) + " with numbers " + numbers.toString());
+                            return true;
+                        }
+                    }
+                }
+
+                //hidden
+
+                //get unfilled numbers
+                HashSet unfillednumbers = getNumberSet();
+                for (Lahter lahter : getColumn(column, game)) {
+                    unfillednumbers.remove(lahter.getValue());
+                }
+
+                ArrayList<ArrayList<Integer>> numberscontainedinlahters = new ArrayList();
+                for (int i = 0; i < dim2; i++) {
+                    numberscontainedinlahters.add(new ArrayList<Integer>());
+                }
+
+                for (int index = 0; index < emptyLahtrid.size(); index++) {
+                    Lahter lahter = emptyLahtrid.get(index);
+                    if (lahter.getValue() == 0) {
+                        for (int numbrid : lahter.getNumbers()) {
+                            numberscontainedinlahters.get(numbrid - 1).add(index);
+                        }
+                    }
+                }
+                ArrayList<Integer> numberlist = getNumberList();
+
+                //removes unneeded empty lists (of those numbers that are already filled)
+                int b = 0;
+                while (b < numberscontainedinlahters.size()) {
+                    if (numberscontainedinlahters.get(b).isEmpty()) {
+                        numberscontainedinlahters.remove(b);
+                        numberlist.remove(b);
+                    } else {
+                        b++;
+                    }
+                }
+
+                //taking combinations of fillable numbers and analyzing if total lahters needed by them is more than the amount of numbers being analyzed
+                for (int i = 2; i < Math.ceil(emptyLahtrid.size() / 2); i++) {
+                    for (Object a : combinations(unfillednumbers.size(), i)) {
+                        //you've got the combinations, what now?
+                        ArrayList<Integer> chosenOnesIndexes = new ArrayList<>((ArrayList<Integer>) a);
+
+                        //collecting lahters needed
+                        HashSet<Integer> chosenLahtersIndexes = new HashSet<>();
+                        for (int query : chosenOnesIndexes)
+                            chosenLahtersIndexes.addAll(numberscontainedinlahters.get(query));
+                        //not a hidden pair, triplet,...
+                        if (chosenLahtersIndexes.size() > chosenOnesIndexes.size())
+                            continue;
+
+                        ArrayList<Lahter> chosenLahtrid = new ArrayList<>();
+                        for (int index : chosenLahtersIndexes)
+                            chosenLahtrid.add(emptyLahtrid.get(index));
+
+                        HashSet<Integer> chosenOnes = new HashSet();
+                        for (int arv : chosenOnesIndexes)
+                            chosenOnes.add(numberlist.get(arv));
+
+
+                        //remove other numbers from chosen lahters
+                        for (Lahter lahter : chosenLahtrid)
+                            for (int arv : allNumbers)
+                                if (!chosenOnes.contains(arv))
+                                    if (lahter.getNumbers().remove(arv))
+                                        somethingDone = true;
+
+
+                        //remove the numbers from the other lahtrid in the same row
+                        lahtrid:
+                        for (Lahter lahter : emptyLahtrid) {
+                            for (Lahter lahter1 : chosenLahtrid)
+                                if (lahter.equals(lahter1))
+                                    continue lahtrid;
+                            for (int usedNumber : chosenOnes)
+                                if (lahter.getNumbers().remove(usedNumber))
+                                    somethingDone = true;
+                        }
+
+                        //TODO check if inside a box
+
+                        if (somethingDone) {
+                            addMessage(game, "column " + String.valueOf(column) + ": hidden " + getCollectionName(i) + " with numbers " + chosenOnes.toString());
                             return true;
                         }
                     }
@@ -668,7 +966,7 @@ public class Loogika {
      * @param findNextOnes look for lahtrid with only one choice remaining, ca 3x times faster for computer, less intuitive for people, but more intuitive, if trying to fill
      */
     private static void afterNumber(Lahter antudLahter, Game game, boolean showXY, String message, boolean findNextOnes) {
-        int[] XY = getXYFromLocs(new int[][]{{antudLahter.kast.locX, antudLahter.kast.locY},{antudLahter.locX, antudLahter.locY}});
+        int[] XY = getXYFromLocs(new int[][]{{antudLahter.box.locX, antudLahter.box.locY}, {antudLahter.locX, antudLahter.locY}});
         int x = XY[0];
         int y = XY[1];
 
@@ -676,40 +974,43 @@ public class Loogika {
 
         ArrayList<Lahter> nextLahtrid = new ArrayList<>();
 
-        if (showXY) game.messages.add("x:  " + x + " y:  " + y + " value:  " +  value + " " +  message);
+        if (showXY) addMessage(game, "x:" + x + " y:" + y + " value: " + value + message);
 
         //remove possible numbers in the same row, column and the 3x3 box
 
         //the same 3x3 box
-        for (Lahter lahter : getLahter(x, y, game.kastid).kast.getLahtrid()) {
-            lahter.getNumbers().remove((Integer) value);
+        for (Lahter lahter : getLahter(x, y, game).box.getLahtrid()) {
+            lahter.getNumbers().remove(value);
             if (findNextOnes){
                 if (lahter.getNumbers().size() == 1 && lahter.getValue() == 0) {
-                    lahter.setMessage(" (box " + y + ", only choice " + lahter.getNumbers().get(0) + ")");
-                    lahter.setValue(lahter.getNumbers().get(0));
+                    int onlyValue = (int) lahter.getNumbers().toArray()[0];
+                    addMessage(game, " (box " + y + ", only choice " + onlyValue + ")");
+                    lahter.setValue(onlyValue);
                     nextLahtrid.add(lahter);
                 }
             }
         }
 
         //same row
-        for (Lahter lahter : getRow(y, game.kastid)) {
-            lahter.getNumbers().remove((Integer) value);
+        for (Lahter lahter : getRow(y, game)) {
+            lahter.getNumbers().remove(value);
             if (findNextOnes) {
                 if (lahter.getNumbers().size() == 1 && lahter.getValue() == 0) {
-                    lahter.setMessage(" (row " + y + ", only choice " + lahter.getNumbers().get(0) + ")");
-                    lahter.setValue(lahter.getNumbers().get(0));
+                    int onlyValue = (int) lahter.getNumbers().toArray()[0];
+                    addMessage(game, " (row " + y + ", only choice " + onlyValue + ")");
+                    lahter.setValue(onlyValue);
                     nextLahtrid.add(lahter);
                 }
             }
         }
         //same column
-        for (Lahter lahter : getColumn(x, game.kastid)) {
-            lahter.getNumbers().remove((Integer) value);
+        for (Lahter lahter : getColumn(x, game)) {
+            lahter.getNumbers().remove(value);
             if (findNextOnes) {
                 if (lahter.getNumbers().size() == 1 && lahter.getValue() == 0) {
-                    lahter.setMessage(" (column " + x + ", only choice " + lahter.getNumbers().get(0) + ")");
-                    lahter.setValue(lahter.getNumbers().get(0));
+                    int onlyValue = (int) lahter.getNumbers().toArray()[0];
+                    addMessage(game, " (column " + x + ", only choice " + onlyValue + ")");
+                    lahter.setValue(onlyValue);
                     nextLahtrid.add(lahter);
                 }
             }
@@ -720,14 +1021,25 @@ public class Loogika {
         }
     }
 
+    private static void setLevel(int level) {
+        Loogika.level = level;
+    }
 
-    static Game copyGame(Game game) {
-        Kast[] clone = newKastid();
+    private static void addMessage(Game game, String message) {
+        if (prevLevel != level) {
+            game.messages.add("Logic level " + level);
+            prevLevel = level;
+        }
+        game.messages.add(message);
+    }
+
+    private static Game copyGame(Game game) {
+        Box[] clone = newKastid();
 
         for (int i = 0; i < dim2; i++) {
             for (int j = 0; j < dim2; j++) {
                 clone[i].getLahtrid()[j].setValue(game.kastid[i].getLahtrid()[j].getValue());
-                clone[i].getLahtrid()[j].setNumbers(copyList(game.kastid[i].getLahtrid()[j].getNumbers()));
+                clone[i].getLahtrid()[j].setNumbers(copyHashSet(game.kastid[i].getLahtrid()[j].getNumbers()));
             }
         }
 
@@ -736,10 +1048,12 @@ public class Loogika {
 
     private static ArrayList<Integer> copyList(ArrayList<Integer> in) {
         ArrayList<Integer> out = new ArrayList<>();
-        for (int a : in) {
-            out.add(a);
-        }
+        out.addAll(in);
         return out;
+    }
+
+    private static HashSet<Integer> copyHashSet(HashSet<Integer> set) {
+        return new HashSet(Arrays.asList(set.toArray(new Integer[]{})));
     }
 
     private static void printSidewaysGrid(Game game1, Game game2) {
@@ -747,18 +1061,30 @@ public class Loogika {
             for (int lahterY = 1; lahterY <= dim; lahterY++) {
                 for (int kastX = 1; kastX <= dim; kastX++) {
                     for (int lahterX = 1; lahterX <= dim; lahterX++) {
-                        int value = 0;
-                        value = getKast(kastX, kastY, game1.kastid).getLahter(lahterX, lahterY).getValue();
-                        print(value == 0 ? "*" : (value > 9 ? String.valueOf((char) (value - dim2 - 1 + 97 + 7)) : Integer.toString(value)));
+                        int value;
+                        value = getKast(kastX, kastY, game1).getLahter(lahterX, lahterY).getValue();
+                        if (value == 0) {
+                            printSpaceBefore("*");
+                        } else if (value > 9) {
+                            printNoSpace(value);
+                        } else {
+                            printSpaceBefore(value);
+                        }
                     }
                     print(" ");
                 }
                 print("        ");
                 for (int kastX = 1; kastX <= dim; kastX++) {
                     for (int lahterX = 1; lahterX <= dim; lahterX++) {
-                        int value = 0;
-                        value = getKast(kastX, kastY, game2.kastid).getLahter(lahterX, lahterY).getValue();
-                        print(value == 0 ? "*" : (value > 9 ? String.valueOf((char) (value - dim2 - 1 + 97 + 7)) : Integer.toString(value)));
+                        int value;
+                        value = getKast(kastX, kastY, game2).getLahter(lahterX, lahterY).getValue();
+                        if (value == 0) {
+                            printSpaceBefore("*");
+                        } else if (value > 9) {
+                            printNoSpace(value);
+                        } else {
+                            printSpaceBefore(value);
+                        }
                     }
                     print(" ");
                 }
@@ -776,13 +1102,19 @@ public class Loogika {
         for (int i = 0; i < gamesAmount; i++) {
             if (!printOnlyUnsolvable || (printOnlyUnsolvable && !solutions.get(i).solved)) {
                 if (printSolutionSteps) {
-                    for (String message : solutions.get(i).messages) {
+                    for (int j = 0; j < solutions.get(i).messages.size(); j++) {
+                        String message = solutions.get(i).messages.get(j);
+                        if (!message.contains("Logic")) {
+                            String index = Integer.toString(j);
+                            print(new String(new char[5 - index.length()]).replace('\0', ' ') + index + ": ");
+                        }
                         println(message);
                     }
                 }
                 newLine();
                 printSidewaysGrid(puzzles.get(i), solutions.get(i));
                 newLine();
+                println("----------------------------------------------------------------");
             }
         }
     }
@@ -807,10 +1139,10 @@ public class Loogika {
     }
 
 
-    static Kast[] newKastid() {
-        Kast[] kastid = new Kast[dim2];
-        for (int i = 1; i <= dim2; i++) {//dim2 korda tee Kast
-            kastid[i - 1] = genKast(getXYFromBoxInt(i)[0], getXYFromBoxInt(i)[1]);
+    static Box[] newKastid() {
+        Box[] kastid = new Box[dim2];
+        for (int i = 1; i <= dim2; i++) {//dim2 korda tee Box
+            kastid[i - 1] = genKast(getXYFromInt(i)[0], getXYFromInt(i)[1]);
         }
         return kastid;
     }
@@ -818,33 +1150,41 @@ public class Loogika {
     /**
      * @param locX 1-3
      * @param locY 1-3
-     * @return Kast
+     * @return Box
      */
-    private static Kast genKast(int locX, int locY) {
+    private static Box genKast(int locX, int locY) {
         Lahter[] lahtrid = new Lahter[dim2];
         for (int i = 0; i < dim2; i++) {//dim2 korda tee Lahter
-            lahtrid[i] = new Lahter(i % dim + 1, i / dim + 1, getNumberList(), 0,null, null);
+            lahtrid[i] = new Lahter(i % dim + 1, i / dim + 1, getNumberSet(), 0, null, null);
         }
-        Kast kast = new Kast(locX, locY, lahtrid, dim);
+        Box box = new Box(locX, locY, lahtrid, dim);
         for (Lahter lahter : lahtrid) {
-            lahter.kast = kast;
+            lahter.box = box;
         }
-        return kast;
+        return box;
     }
 
-    private static ArrayList<Integer> getNumberList() {
-        ArrayList<Integer> result = new ArrayList<>(dim2);
+    private static HashSet getNumberSet() {
+        HashSet result = new HashSet();
         for (int i = 1; i <= dim2; i++) {
             result.add(i);
         }
         return result;
     }
 
-    private static ArrayList<Lahter> getRow(int y, Kast[] difKastid) {
+    private static ArrayList<Integer> getNumberList() {
+        ArrayList result = new ArrayList();
+        for (int i = 1; i <= dim2; i++) {
+            result.add(i);
+        }
+        return result;
+    }
+
+    private static ArrayList<Lahter> getRow(int y, Game game) {
         ArrayList<Lahter> lahtrid = new ArrayList<>();
-        for (Kast kast : difKastid) {
-            for (Lahter lahter : kast.getLahtrid()) {
-                if (kast.locY == (y - 1) / dim + 1 && lahter.locY == (y - 1) % dim + 1) {
+        for (Box box : game.kastid) {
+            for (Lahter lahter : box.getLahtrid()) {
+                if (box.locY == (y - 1) / dim + 1 && lahter.locY == (y - 1) % dim + 1) {
                     lahtrid.add(lahter);
                 }
             }
@@ -852,11 +1192,11 @@ public class Loogika {
         return lahtrid;
     }
 
-    private static ArrayList<Lahter> getColumn(int x, Kast[] difKastid) {
+    private static ArrayList<Lahter> getColumn(int x, Game game) {
         ArrayList<Lahter> lahtrid = new ArrayList<>();
-        for (Kast kast : difKastid) {
-            for (Lahter lahter : kast.getLahtrid()) {
-                if (kast.locX == (x - 1) / dim + 1 && lahter.locX == (x - 1) % dim + 1) {
+        for (Box box : game.kastid) {
+            for (Lahter lahter : box.getLahtrid()) {
+                if (box.locX == (x - 1) / dim + 1 && lahter.locX == (x - 1) % dim + 1) {
                     lahtrid.add(lahter);
                 }
             }
@@ -865,8 +1205,8 @@ public class Loogika {
     }
 
     private static boolean checkFilled(Game game) {
-        for (Kast kast : game.kastid) {
-            for (Lahter lahter : kast.getLahtrid()) {
+        for (Box box : game.kastid) {
+            for (Lahter lahter : box.getLahtrid()) {
                 if (lahter.getValue() == 0) {
                     return false;
                 }
@@ -897,18 +1237,18 @@ public class Loogika {
     /**
      * @param locX 1-3
      * @param locY 1-3
-     * @return Kast
+     * @return Box
      */
-    private static Kast getKast(int locX, int locY, Kast[] difKastid) {
-        return difKastid[(locY - 1) * dim + locX - 1];
+    private static Box getKast(int locX, int locY, Game game) {
+        return game.kastid[(locY - 1) * dim + locX - 1];
     }
 
-    private static Kast getKast(int[] loc, Kast[] difKastid) {
-        return difKastid[(loc[1] - 1) * dim + loc[0] - 1];
+    private static Box getKast(int[] loc, Game game) {
+        return game.kastid[(loc[1] - 1) * dim + loc[0] - 1];
     }
 
-    private static Kast getKast(int ind, Kast[] difKastid) {
-        return difKastid[ind - 1];
+    private static Box getKast(int ind, Game game) {
+        return game.kastid[ind - 1];
     }
 
     /**
@@ -916,18 +1256,18 @@ public class Loogika {
      * @param y 1-9
      * @return lahter
      */
-    static Lahter getLahter(int x, int y, Kast[] difKastid) {
+    static Lahter getLahter(int x, int y, Game game) {
         int[][] locs = getLocsFromXY(x, y);
         int[] locsKast = locs[0];
         int[] locsLahter = locs[1];
-        return getKast(locsKast, difKastid).getLahter(locsLahter);
+        return getKast(locsKast, game).getLahter(locsLahter);
     }
 
     /**
      * @param val 1-9
      * @return x = 1-3, y = 1-3
      */
-    private static int[] getXYFromBoxInt(int val) {
+    private static int[] getXYFromInt(int val) {
         return new int[]{(val - 1) % dim + 1, (val - 1) / dim + 1};
     }
 
@@ -979,26 +1319,34 @@ public class Loogika {
         return new int[]{(kastXY[0] - 1) * dim + lahterXY[0], (kastXY[1] - 1) * dim + lahterXY[1]};
     }
 
-    private static void print(Object... o) {
+    public static void print(Object... o) {
         for (Object i : o) {
             System.out.print(i + " ");
         }
     }
 
-    static void println(Object... o) {
+    public static void printSpaceBefore(Object o) {
+        System.out.print(" " + o);
+    }
+
+    public static void printNoSpace(Object o) {
+        System.out.print(o);
+    }
+
+    public static void println(Object... o) {
         for (Object i : o) {
             System.out.print(i + " ");
         }
         newLine();
     }
 
-    private static ArrayList arrayToArrayList(Object[] set) {
+    public static ArrayList arrayToArrayList(Object[] set) {
         ArrayList list = new ArrayList<>();
         Collections.addAll(list, set);
         return list;
     }
 
-    private static void newLine() {
+    public static void newLine() {
         System.out.println();
     }
 
