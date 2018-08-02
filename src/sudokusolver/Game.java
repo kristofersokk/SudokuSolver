@@ -5,13 +5,14 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Scanner;
 
-import static sudokusolver.Loogika.dim;
+import static sudokusolver.MainClass.dim;
+import static sudokusolver.MainClass.dim2;
 
 public class Game {
 
     //1.2 for 9x9
     //2.1 for 16x16
-    public static final float renderScale = 2.1f;
+    static final float renderScale = dim2 <= 9 ? 1.1f : 2.1f;
     ArrayList<String> messages;
     boolean solved = false;
     Box[] kastid;
@@ -52,6 +53,12 @@ public class Game {
     static void solveTestString() {
         Game game = new Game();
         game.importFromTestString(MainClass.testString);
+        game.solve();
+    }
+
+    static void solveSudokuString(String sudoku) {
+        Game game = new Game();
+        game.importFromTestString(sudoku);
         game.solve();
     }
 
@@ -182,10 +189,10 @@ public class Game {
      * @param info line by line
      */
     private void importFromTestString(String info) {
-        for (int rida = 1; rida <= Loogika.dim2; rida++) {
-            for (int index = 1; index <= Loogika.dim2; index++) {
+        for (int rida = 1; rida <= MainClass.dim2; rida++) {
+            for (int index = 1; index <= MainClass.dim2; index++) {
                 Lahter lahter = Loogika.getLahter(index, rida, this);
-                char ch = info.charAt((rida - 1) * Loogika.dim2 + index - 1);
+                char ch = info.charAt((rida - 1) * MainClass.dim2 + index - 1);
                 if (Character.isDigit(ch) && Integer.parseInt(Character.toString(ch)) > 0) {
                     lahter.setValue(Integer.parseInt(Character.toString(ch)));
                 } else {

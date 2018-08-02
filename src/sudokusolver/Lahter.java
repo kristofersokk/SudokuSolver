@@ -21,7 +21,7 @@ public class Lahter {
      *                1.rida vasakult paremale, 2. -||-, 3. -||-, ...
      * @param value null või väärtus
      */
-    Lahter(int locX, int locY, HashSet numbers, @Nullable int value, Box box, @Nullable String message) {
+    Lahter(int locX, int locY, HashSet<Integer> numbers, @Nullable int value, Box box, @Nullable String message) {
         this.numbers = numbers;
         this.value = value;
         this.locX = locX;
@@ -35,24 +35,28 @@ public class Lahter {
         return numbers;
     }
 
-    void setNumbers(HashSet numbers) {
+    void setNumbers(HashSet<Integer> numbers) {
         this.numbers = numbers;
     }
 
     @Override
     public String toString() {
-        int dim = Loogika.dim;
-        int dim2 = Loogika.dim2;
+        int dim = MainClass.dim;
+        int dim2 = MainClass.dim2;
         StringBuilder result = new StringBuilder();
         if (value == 0) {
             for (int arv = 1; arv <= dim2; arv++) {
-                result.append(numbers.contains(arv) ? ((arv <= 9) ? " " + arv : Integer.toString(arv)) : "  ");
+                if (dim2 <= 9) {
+                    result.append(numbers.contains(arv) ? Integer.toString(arv) : " ");
+                } else {
+                    result.append(numbers.contains(arv) ? ((arv <= 9) ? " " + arv : Integer.toString(arv)) : "  ");
+                }
                 if (arv % dim == 0)
                     result.append("\n");
             }
         } else {
             for (int arv = 1; arv <= dim2; arv++) {
-                result.append("  ");
+                result.append(dim2 <= 9 ? " " : "  ");
                 if (arv % dim == 0)
                     result.append("\n");
             }
@@ -61,7 +65,7 @@ public class Lahter {
     }
 
     int[] getXYOnBoard() {
-        int dim = Loogika.dim;
+        int dim = MainClass.dim;
         return new int[]{(box.locX - 1) * dim + locX, (box.locY - 1) * dim + locY};
     }
 
