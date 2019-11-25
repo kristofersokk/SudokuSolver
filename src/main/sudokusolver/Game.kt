@@ -3,20 +3,16 @@ package sudokusolver
 import sudokusolver.Main.dim
 import sudokusolver.Main.dim2
 import java.io.File
-import kotlin.collections.ArrayList
 
-val renderScale = if (dim2 <= 9) 1.1f else 2.1f
+data class Game(val boxes: Array<Box> = generateBoxes(), val messages: ArrayList<String> = ArrayList()) {
 
-
-class Game(val boxes: Array<Box> = generateBoxes(), val messages: ArrayList<String> = ArrayList()) {
-
-    var solved = false
+    var isSolved = false
 
     private var prevLevel = -1
-    private var level = 1
-        set(value) {
-            field = value
-        }
+    internal var level = 1
+
+    val allCells: List<Cell>
+        get() = boxes.flatMap { it.cells }
 
     fun solve() {
         Logic.startFilling(this)
@@ -30,7 +26,26 @@ class Game(val boxes: Array<Box> = generateBoxes(), val messages: ArrayList<Stri
         messages.add(message)
     }
 
+    fun checkFilled(): Boolean {
+        boxes.forEach {
+            it.cells.forEach { cell ->
+                if (cell.value == 0) return false
+            }
+        }
+        return true
+    }
+
+    infix fun row(y: Int): List<Cell> {
+        return allCells.filter { it.globalCoords.y == y }
+    }
+
+    infix fun column(x: Int): List<Cell> {
+        return allCells.filter { it.globalCoords.x == x }
+    }
+
     companion object {
+
+        val renderScale = if (dim2 <= 9) 1.1f else 2.1f
 
         fun generateBoxes(): Array<Box> {
             return (1..dim2).map { Box(it) }.toTypedArray()
@@ -51,7 +66,7 @@ class Game(val boxes: Array<Box> = generateBoxes(), val messages: ArrayList<Stri
         }
 
         fun solveMultipleFromFile(level: Int, start: Int, stop: Int): List<Game> {
-            val file = File(Main.fileLocation + "level" + level + "-10000.txt")
+            val file = File("../src/main/sudokusolver/level$level-10000.txt")
             val lines = file.readLines()
             return (stop..start).map {
                 val game = Game()
@@ -62,11 +77,13 @@ class Game(val boxes: Array<Box> = generateBoxes(), val messages: ArrayList<Stri
         }
     }
 
-    override fun toString(): String {
-        val boxesRows = boxes.map { it.toPrettyString(cellPossibilities = true, border = true).split("\n") }
-        return (1..dim).joinToString(separator = "\n") { boxY ->
-            (1..boxesRows[0].size).joinToString(separator = "\n") { rowY ->
-                boxesRows.subList(boxY * dim, boxY * dim + dim).joinToString { it[rowY] }
+    fun toPrettyString(cellPossibilities: Boolean): String {
+        val boxesRows = boxes.map { it.toPrettyString(cellPossibilities = cellPossibilities, border = true).split("\n") }
+        val width = boxesRows[0].size
+        println(width)
+        return (0 until dim).joinToString("\n") { boxY ->
+            (0 until width).joinToString("\n") { rowY ->
+                boxesRows.subList(boxY, boxY + dim).joinToString("") { it[rowY] }
             }
         }
     }
@@ -100,7 +117,13 @@ class Game(val boxes: Array<Box> = generateBoxes(), val messages: ArrayList<Stri
         }
     }
 
-    fun getBox(coords: Coords) : Box = boxes[coords.linear]
+    operator fun get(index: Int) = getBox(index)
+
+    fun getBox(locX: Int, locY: Int): Box = boxes[Coords(locX, locY).linear - 1]
+
+    fun getBox(coords: Coords): Box = boxes[coords.linear - 1]
+
+    fun getBox(index: Int): Box = boxes[index - 1]
 
     fun getCell(bLoc: Coords, cLoc: Coords) : Cell = getBox(bLoc).getCell(cLoc)
 

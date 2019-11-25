@@ -41,17 +41,17 @@ object Main {
 //        });
         measure.start()
         val game = if (args.isNotEmpty()) {
-            val sudokuString = args[0]
+            val sudokuString = args[1]
             Game.solveSudokuString(sudokuString)
         } else { //        Game.solveMultipleFromFile(level, 1, 10000);
             Game.solveSudokuString(testString)
         }
-        println(game)
+        println(game.toPrettyString(true))
         //        Game.solveMultipleFromFile(1, 1, 10000);
 //        Game.solveMultipleFromFile(2, 1, 10000);
 //        Game.solveMultipleFromFile(3, 1, 10000);
 //        Game.solveMultipleFromFile(4, 1, 10000);
-        Game.solveMultipleFromFile(6, 1, 10000)
+//        Game.solveMultipleFromFile(6, 1, 10000)
         measure.stop()
         //Logic.printSolutions(printSolutionSteps, printOnlyUnsolvable);
         println("Solutions: ${Logic.solutionsAmount}/${Logic.gamesAmount}")

@@ -1,16 +1,16 @@
 package sudokusolver
 
+import sudokusolver.Main.dim
 import sudokusolver.Main.dim2
+import sudokusolver.Main.findNextOnes
+import sudokusolver.Main.sameBoxFirst
 import java.awt.BorderLayout
 import java.awt.Dimension
-import java.io.File
-import java.io.FileNotFoundException
-import java.util.*
 import javax.swing.JFrame
 import javax.swing.JLabel
 import javax.swing.SwingConstants
 import javax.swing.WindowConstants
-import kotlin.collections.ArrayList
+import kotlin.math.ceil
 
 object Logic {
 
@@ -19,7 +19,6 @@ object Logic {
     private val collectionNames = arrayOf("pair", "triplet", "quadruplet", "quintuplet", "sextuplet", "septuplet")
     private val puzzles = ArrayList<Game>()
     private val solutions = ArrayList<Game>()
-    private val allNumbers = numberList
 
     private fun createAndShowGUI() {
         val frame = JFrame("Loogika")
@@ -42,7 +41,7 @@ object Logic {
             if (fillingNormal(game)) {
                 continue
             } else {
-                if (checkFilled(game)) {
+                if (game.checkFilled()) {
                     throw FinishedException(game, true)
                 }
             }
@@ -60,15 +59,16 @@ object Logic {
     }
 
     /**
-     * @param unsolved the original kastid after reading in the information
+     * @param unsolved the original boxes after reading in the information
      * updates puzzles, solutions, gamesAmount and solutionsAmount
      */
     fun startFilling(unsolved: Game) {
-        val solved = copyGame(unsolved)
-        initialLoading(solved)
+        val solvedGame = unsolved.copy()
+        solvedGame.allCells.forEach { println(it.value) }
+        initialLoading(solvedGame)
         //println(solved.toString());
         try {
-            continuousFilling(solved)
+            continuousFilling(solvedGame)
         } catch (e: FillingException) {
             e.printStackTrace()
             //            try {
@@ -78,17 +78,17 @@ object Logic {
 //            }
             printSidewaysGrid(unsolved, e.game)
             for (message in e.game.messages) {
-                println(message!!)
+                println(message)
             }
-        } catch (e: FinishedException) {
+        } catch (finishedException: FinishedException) {
             puzzles.add(unsolved)
-            solutions.add(solved)
+            solutions.add(solvedGame)
             gamesAmount++
-            if (gamesAmount % 1000 == 0) println(gamesAmount)
-            prevLevel = -1 //to print the first logic level
-            if (e.filled) {
+            if (gamesAmount % 1000 == 0)
+                println(gamesAmount)
+            if (finishedException.filled) {
                 solutionsAmount++
-                solved.solved = true
+                solvedGame.isSolved = true
             }
             //            println(solved.kastid[0]);
 //            println(solved);
@@ -96,11 +96,9 @@ object Logic {
     }
 
     private fun initialLoading(game: Game) {
-        for (box in game.boxes) {
-            for (lahter in box.cells) {
-                if (lahter.getValue() !== 0) {
-                    afterNumber(lahter, game, false, null, Main.findNextOnes)
-                }
+        game.allCells.forEach { cell ->
+            if (cell.value > 0) {
+                afterNumber(cell, game, true, null, findNextOnes)
             }
         }
     }
@@ -109,93 +107,88 @@ object Logic {
     private fun fillingNormal(game: Game): Boolean {
         var somethingDone = false
         //TODO p''ra ringi, et ta otsiks sama numbrit teistest kastidest enne, siis teisi numbreid
-        setLevel(1)
+        game.level = 1
         //box
-        if (Main.sameBoxFirst) {
-            var i = 1
-            while (i <= dim2) {
+        if (sameBoxFirst) {
+            var boxIndex = 1
+            while (boxIndex <= dim2) {
                 somethingDone = false
-                val box = getKast(i, game)
+                val box = game.getBox(boxIndex)
                 val availableSlots = ArrayList<ArrayList<Int>>()
-                val lahtridInBoxes: ArrayList<Cell> = arrayToArrayList(box.cells)
                 val olemasNumbrid = ArrayList<Int>()
-                for (j in 1..dim2) {
+                repeat(dim2) {
                     availableSlots.add(ArrayList())
                 }
-                for (j in 0 until dim2) {
-                    val lahter = lahtridInBoxes[j]
-                    val numbers: HashSet<*> = lahter.numbers
-                    if (numbers.size == 0 && lahter.getValue() === 0) {
-                        val XY: IntArray = lahter.getXyOnBoard()
-                        throw FillingException("lahter at x: " + XY[0] + ", y: " + XY[1] + " is empty and without possibilities", game)
+                box.cells.forEach { cell ->
+                    if (cell.numbers.size == 0 && cell.value == 0) {
+                        val globalCoords = cell.globalCoords
+                        throw FillingException("lahter at x: ${globalCoords.x}, y: ${globalCoords.y} is empty and without possibilities", game)
                     }
                 }
                 //get the frequency of possibilities of numbers 1-dim2
                 for (j in 0 until dim2) {
-                    val lahter = lahtridInBoxes[j]
-                    for (a in lahter.numbers) {
+                    val cell = box.cells[j]
+                    for (a in cell.numbers) {
                         availableSlots[a - 1].add(j + 1)
                     }
-                    olemasNumbrid.add(lahter.getValue())
+                    olemasNumbrid.add(cell.value)
                 }
                 //check the different numbers and the number of possibilities
                 for (j in 0 until dim2) {
                     val arvud = availableSlots[j]
                     if (arvud.size > 0 && olemasNumbrid.contains(j + 1)) {
-                        throw FillingException("box " + i + " already has number " + (j + 1) + ", but possibilities exist", game)
+                        throw FillingException("box $boxIndex already has number ${j + 1}, but possibilities exist", game)
                     }
                     if (arvud.size == 1) {
                         val lahter = box.cells[arvud[0] - 1]
-                        lahter.setValue(j + 1)
-                        afterNumber(lahter, game, true, " (box $i)", Main.findNextOnes)
+                        lahter.value = j + 1
+                        afterNumber(lahter, game, true, " (box $boxIndex)", findNextOnes)
                         somethingDone = true
                         //                    println("box",j+1);
                     } else if (arvud.size == 0 && !olemasNumbrid.contains(j + 1)) {
-                        throw FillingException("box " + i + " doesn't have number " + (j + 1) + " and no possibilities exist", game)
+                        throw FillingException("box $boxIndex doesn't have number ${j + 1} and no possibilities exist", game)
                     }
                 }
                 if (!somethingDone) {
-                    i++
+                    boxIndex++
                 }
             }
         } else {
             for (box in game.boxes) {
                 val availableSlots = ArrayList<ArrayList<Int>>()
-                val lahtridInBoxes: ArrayList<Cell> = arrayToArrayList(box.cells)
                 val olemasNumbrid = ArrayList<Int>()
                 for (j in 1..dim2) {
                     availableSlots.add(ArrayList())
                 }
                 for (j in 0 until dim2) {
-                    val lahter = lahtridInBoxes[j]
-                    val numbers: HashSet<*> = lahter.numbers
-                    if (numbers.size == 0 && lahter.getValue() === 0) {
-                        val XY: IntArray = lahter.getXyOnBoard()
-                        throw FillingException("lahter at x: " + XY[0] + ", y: " + XY[1] + " is empty and without possibilities", game)
+                    val cell = box.cells[j]
+                    if (cell.numbers.size == 0 && cell.value == 0) {
+                        val globalCoords: GlobalCoords = cell.globalCoords
+                        throw FillingException("lahter at x: ${globalCoords.x}, y: ${globalCoords.y} is empty and without possibilities", game)
                     }
                 }
                 //get the frequency of possibilities of numbers 1-dim2
                 for (j in 0 until dim2) {
-                    val lahter = lahtridInBoxes[j]
+                    val lahter = box.cells[j]
                     for (a in lahter.numbers) {
                         availableSlots[a - 1].add(j + 1)
                     }
-                    olemasNumbrid.add(lahter.getValue())
+                    olemasNumbrid.add(lahter.value)
                 }
                 //check the different numbers and the number of the possibilities
                 for (j in 0 until dim2) {
-                    val arvud = availableSlots[j]
-                    if (arvud.size > 0 && olemasNumbrid.contains(j + 1)) {
-                        throw FillingException("box " + getIntFromLocalLocs(intArrayOf(box.locX, box.locY)) + " already has number " + (j + 1) + ", but possibilities exist", game)
+                    val numbers = availableSlots[j]
+                    if (numbers.size > 0 && olemasNumbrid.contains(j + 1)) {
+                        throw FillingException("box ${box.index} already has number ${j + 1}, but possibilities exist", game)
                     }
-                    if (arvud.size == 1) {
-                        val lahter = box.cells[arvud[0] - 1]
-                        lahter.setValue(j + 1)
-                        afterNumber(lahter, game, true, " (box " + getIntFromLocalLocs(intArrayOf(box.locX, box.locY)) + ")", Main.findNextOnes)
+                    if (numbers.size == 1) {
+                        val cell = box.cells[numbers[0] - 1]
+                        cell.value = j + 1
+                        afterNumber(cell, game, true, " (box ${box.index})", findNextOnes)
                         return true
                         //                    println("box",j+1);
-                    } else if (arvud.size == 0 && !olemasNumbrid.contains(j + 1)) {
-                        throw FillingException("box " + getIntFromLocalLocs(intArrayOf(box.locX, box.locY)) + " doesn't have number " + (j + 1) + " and no possibilities exist", game)
+                    } else if (numbers.size == 0 && !olemasNumbrid.contains(j + 1)) {
+                        throw FillingException("box ${box.index} doesn't have number ${j + 1} and no possibilities exist", game)
                     }
                 }
             }
@@ -206,40 +199,40 @@ object Logic {
         //rows
         for (row in 1..dim2) {
             val availableSlots = ArrayList<ArrayList<Int>>()
-            val lahtridInRow = getRow(row, game)
+            val lahtridInRow = game row row
             val olemasNumbrid = ArrayList<Int>()
             for (j in 1..dim2) {
                 availableSlots.add(ArrayList())
             }
             for (j in 0 until dim2) {
-                val lahter = lahtridInRow[j]
-                val numbers: HashSet<*> = lahter.numbers
-                if (numbers.size == 0 && lahter.getValue() === 0) {
-                    val XY: IntArray = lahter.getXyOnBoard()
-                    throw FillingException("lahter at x: " + XY[0] + ", y: " + XY[1] + " is empty and without possibilities", game)
+                val cell = lahtridInRow[j]
+                val numbers: HashSet<*> = cell.numbers
+                if (numbers.size == 0 && cell.value == 0) {
+                    val globalCoords: GlobalCoords = cell.globalCoords
+                    throw FillingException("lahter at x: ${globalCoords.x}, y: ${globalCoords.y} is empty and without possibilities", game)
                 }
             }
             //get the frequency of possibilities of numbers 1-dim2
             for (j in 0 until dim2) {
-                val lahter = lahtridInRow[j]
-                for (a in lahter.numbers) {
+                val cell = lahtridInRow[j]
+                for (a in cell.numbers) {
                     availableSlots[a - 1].add(j + 1)
                 }
-                olemasNumbrid.add(lahter.getValue())
+                olemasNumbrid.add(cell.value)
             }
             //check the different numbers and the number of the possibilities
             for (j in 0 until dim2) {
                 val arvud = availableSlots[j]
-                if (arvud.size > 0 && olemasNumbrid.contains(j + 1)) {
+                if (arvud.size > 0 && j + 1 in olemasNumbrid) {
                     throw FillingException("row " + row + " already has number " + (j + 1) + ", but possibilities exist", game)
                 }
                 if (arvud.size == 1) {
-                    val lahter = getLahter(arvud[0], row, game)
-                    lahter.setValue(j + 1)
-                    afterNumber(lahter, game, true, " (row $row)", Main.findNextOnes)
+                    val cell = game.getCell(GlobalCoords(arvud[0], row))
+                    cell.value = j + 1
+                    afterNumber(cell, game, true, " (row $row)", findNextOnes)
                     return true
                     //                    println("row",j+1);
-                } else if (arvud.size == 0 && !olemasNumbrid.contains(j + 1)) {
+                } else if (arvud.size == 0 && j + 1 !in olemasNumbrid) {
                     throw FillingException("row " + row + " doesn't have number " + (j + 1) + " and no possibilities exist", game)
                 }
             }
@@ -247,17 +240,17 @@ object Logic {
         //columns
         for (column in 1..dim2) {
             val availableSlots = ArrayList<ArrayList<Int>>()
-            val lahtridInColumn = getColumn(column, game)
+            val lahtridInColumn = game column column
             val olemasNumbrid = ArrayList<Int>()
             for (j in 1..dim2) {
                 availableSlots.add(ArrayList())
             }
             for (j in 0 until dim2) {
-                val lahter = lahtridInColumn[j]
-                val numbers: HashSet<*> = lahter.numbers
-                if (numbers.size == 0 && lahter.getValue() === 0) {
-                    val XY: IntArray = lahter.getXyOnBoard()
-                    throw FillingException("lahter at x: " + XY[0] + ", y: " + XY[1] + " is empty and without possibilities", game)
+                val cell = lahtridInColumn[j]
+                val numbers: HashSet<*> = cell.numbers
+                if (numbers.size == 0 && cell.value == 0) {
+                    val globalCoords: GlobalCoords = cell.globalCoords
+                    throw FillingException("lahter at x: ${globalCoords.x}, y: ${globalCoords.y} is empty and without possibilities", game)
                 }
             }
             //get the frequency of possibilities of numbers 1-dim2
@@ -266,7 +259,7 @@ object Logic {
                 for (a in lahter.numbers) {
                     availableSlots[a - 1].add(j + 1)
                 }
-                olemasNumbrid.add(lahter.getValue())
+                olemasNumbrid.add(lahter.value)
             }
             //check the different numbers and the number of the possibilities
             for (j in 0 until dim2) {
@@ -275,9 +268,9 @@ object Logic {
                     throw FillingException("column " + column + " already has number " + (j + 1) + ", but possibilities exist", game)
                 }
                 if (arvud.size == 1) {
-                    val lahter = getLahter(column, arvud[0], game)
-                    lahter.setValue(j + 1)
-                    afterNumber(lahter, game, true, " (column $column)", Main.findNextOnes)
+                    val lahter = game.getCell(GlobalCoords(column, arvud[0]))
+                    lahter.value = j + 1
+                    afterNumber(lahter, game, true, " (column $column)", findNextOnes)
                     return true
                     //                    println("column",j+1);
                 } else if (arvud.size == 0 && !olemasNumbrid.contains(j + 1)) {
@@ -290,17 +283,17 @@ object Logic {
 
     @Throws(FillingException::class)
     private fun filling1(game: Game): Boolean {
-        setLevel(1)
+        game.level = 1
         for (box in game.boxes) {
-            for (lahter in box.cells) {
-                val numbers = lahter.numbers
-                if (numbers.size == 0 && lahter.getValue() === 0) {
-                    val XY: IntArray = lahter.getXyOnBoard()
-                    throw FillingException("lahter at x: " + XY[0] + ", y: " + XY[1] + " is empty and without possibilities", game)
+            for (cell in box.cells) {
+                val numbers = cell.numbers
+                if (numbers.size == 0 && cell.value == 0) {
+                    val globalCoords = cell.globalCoords
+                    throw FillingException("cell at x: " + globalCoords.x + ", y: " + globalCoords.y + " is empty and without possibilities", game)
                 } else if (numbers.size == 1) {
-                    lahter.setValue(numbers.toTypedArray()[0])
+                    cell.value = numbers.toTypedArray()[0]
                     numbers.clear()
-                    afterNumber(lahter, game, true, " (only choice)", Main.findNextOnes)
+                    afterNumber(cell, game, true, " (only choice)", findNextOnes)
                     return true
                 }
             }
@@ -311,21 +304,21 @@ object Logic {
     @Throws(FillingException::class)
     private fun filling2(game: Game): Boolean {
         var somethingDone = false
-        setLevel(2)
+        game.level = 2
         //box
         for (box in game.boxes) {
             val availableSlots = ArrayList<ArrayList<Int>>()
-            val lahtridInBoxes: ArrayList<Cell> = arrayToArrayList(box.cells)
+            val lahtridInBoxes: List<Cell> = box.cells
             val olemasNumbrid = ArrayList<Int>()
             for (j in 1..dim2) {
                 availableSlots.add(ArrayList())
             }
             for (j in 0 until dim2) {
-                val lahter = lahtridInBoxes[j]
-                val numbers: HashSet<*> = lahter.numbers
-                if (numbers.size == 0 && lahter.getValue() === 0) {
-                    val XY: IntArray = lahter.getXyOnBoard()
-                    throw FillingException("lahter at x: " + XY[0] + ", y: " + XY[1] + " is empty and without possibilities", game)
+                val cell = lahtridInBoxes[j]
+                val numbers = cell.numbers
+                if (numbers.size == 0 && cell.value == 0) {
+                    val globalCoords = cell.globalCoords
+                    throw FillingException("lahter at x: ${globalCoords.x}, y: ${globalCoords.y} is empty and without possibilities", game)
                 }
             }
             //get the frequency of possibilities of numbers 1-dim2
@@ -334,15 +327,15 @@ object Logic {
                 for (a in lahter.numbers) {
                     availableSlots[a - 1].add(j + 1)
                 }
-                olemasNumbrid.add(lahter.getValue())
+                olemasNumbrid.add(lahter.value)
             }
             //check the different numbers and the number of the possibilities
             for (j in 0 until dim2) {
                 val arvud = availableSlots[j]
-                if (arvud.size > 0 && olemasNumbrid.contains(j + 1)) {
-                    throw FillingException("box " + getIntFromLocalLocs(intArrayOf(box.locX, box.locY)) + " already has number " + (j + 1) + ", but possibilities exist", game)
+                if (arvud.size > 0 && j + 1 in olemasNumbrid) {
+                    throw FillingException("box ${box.index} already has number ${j + 1}, but possibilities exist", game)
                 }
-                if (arvud.size >= 2 && arvud.size <= Main.dim) { //check number of rows
+                if (arvud.size in 2..dim) { //check number of rows
                     val moduleRow = HashSet<Int>()
                     for (arv in arvud) {
                         moduleRow.add(arv.partition)
@@ -350,7 +343,7 @@ object Logic {
                     // candidate line (row) is active
                     if (moduleRow.size == 1) {
                         val moduleList = ArrayList(moduleRow)
-                        for (lahter in getRow((box.locY - 1) * Main.dim + moduleList[0], game)) {
+                        for (lahter in game.row((box.locY - 1) * dim + moduleList[0])) {
                             if (lahter.box != box) {
                                 if (lahter.numbers.remove(j + 1)) {
                                     somethingDone = true
@@ -359,7 +352,7 @@ object Logic {
                             }
                         }
                         if (somethingDone) {
-                            game.addMessage("row " + ((box.locY - 1) * Main.dim + moduleList[0]) + ": " + (j + 1))
+                            game.addMessage("row ${(box.locY - 1) * dim + moduleList[0]}: ${j + 1}")
                             return true
                         }
                     }
@@ -371,7 +364,7 @@ object Logic {
                     // candidate line (column) is active
                     if (moduleColumn.size == 1) {
                         val moduleList = ArrayList(moduleColumn)
-                        for (lahter in getColumn((box.locX - 1) * Main.dim + moduleList[0], game)) {
+                        for (lahter in game.column((box.locX - 1) * dim + moduleList[0])) {
                             if (lahter.box != box) {
                                 if (lahter.numbers.remove(j + 1)) {
                                     somethingDone = true
@@ -380,7 +373,7 @@ object Logic {
                             }
                         }
                         if (somethingDone) {
-                            game.addMessage("column " + ((box.locX - 1) * Main.dim + moduleList[0]) + ": " + (j + 1))
+                            game.addMessage("column " + ((box.locX - 1) * dim + moduleList[0]) + ": " + (j + 1))
                             return true
                         }
                     }
@@ -390,17 +383,17 @@ object Logic {
         //rows
         for (row in 1..dim2) {
             val availableSlots = ArrayList<ArrayList<Int>>()
-            val lahtridInRow = getRow(row, game)
+            val lahtridInRow = game row row
             val olemasNumbrid = ArrayList<Int>()
             for (j in 1..dim2) {
                 availableSlots.add(ArrayList())
             }
             for (j in 0 until dim2) {
-                val lahter = lahtridInRow[j]
-                val numbers: HashSet<*> = lahter.numbers
-                if (numbers.size == 0 && lahter.getValue() === 0) {
-                    val XY: IntArray = lahter.getXyOnBoard()
-                    throw FillingException("lahter at x: " + XY[0] + ", y: " + XY[1] + " is empty and without possibilities", game)
+                val cell = lahtridInRow[j]
+                val numbers: HashSet<*> = cell.numbers
+                if (numbers.size == 0 && cell.value == 0) {
+                    val globalCoords = cell.globalCoords
+                    throw FillingException("lahter at x: ${globalCoords.x}, y: ${globalCoords.y} is empty and without possibilities", game)
                 }
             }
             //get the frequency of possibilities of numbers 1-dim2
@@ -409,7 +402,7 @@ object Logic {
                 for (a in lahter.numbers) {
                     availableSlots[a - 1].add(j + 1)
                 }
-                olemasNumbrid.add(lahter.getValue())
+                olemasNumbrid.add(lahter.value)
             }
             //check the different numbers and the number of the possibilities
             for (j in 0 until dim2) {
@@ -417,7 +410,7 @@ object Logic {
                 if (arvud.size > 0 && olemasNumbrid.contains(j + 1)) {
                     throw FillingException("row " + row + " already has number " + (j + 1) + ", but possibilities exist", game)
                 }
-                if (arvud.size >= 2 && arvud.size <= Main.dim) {
+                if (arvud.size >= 2 && arvud.size <= dim) {
                     val module = HashSet<Int>()
                     for (arv in arvud) {
                         module.add(arv.partition)
@@ -425,7 +418,7 @@ object Logic {
                     // multiple lines is active, one number in a row resides in one box
                     if (module.size == 1) {
                         val moduleList = ArrayList(module)
-                        for (lahter in getKast(moduleList[0], row.partition, game).cells) {
+                        for (lahter in game.getBox(moduleList[0], row.partition).cells) {
                             if (lahter.locY != row.modulo) {
                                 if (lahter.numbers.remove(j + 1)) {
                                     somethingDone = true
@@ -444,17 +437,17 @@ object Logic {
         //columns
         for (column in 1..dim2) {
             val availableSlots = ArrayList<ArrayList<Int>>()
-            val lahtridInColumn = getColumn(column, game)
+            val lahtridInColumn = game column column
             val olemasNumbrid = ArrayList<Int>()
             for (j in 1..dim2) {
                 availableSlots.add(ArrayList())
             }
             for (j in 0 until dim2) {
-                val lahter = lahtridInColumn[j]
-                val numbers: HashSet<*> = lahter.numbers
-                if (numbers.size == 0 && lahter.getValue() === 0) {
-                    val XY: IntArray = lahter.getXyOnBoard()
-                    throw FillingException("lahter at x: " + XY[0] + ", y: " + XY[1] + " is empty and without possibilities", game)
+                val cell = lahtridInColumn[j]
+                val numbers: HashSet<*> = cell.numbers
+                if (numbers.size == 0 && cell.value == 0) {
+                    val globalCoords = cell.globalCoords
+                    throw FillingException("lahter at x: ${globalCoords.x}, y: ${globalCoords.y} is empty and without possibilities", game)
                 }
             }
             //get the frequency of possibilities of numbers 1-dim2
@@ -463,7 +456,7 @@ object Logic {
                 for (a in lahter.numbers) {
                     availableSlots[a - 1].add(j + 1)
                 }
-                olemasNumbrid.add(lahter.getValue())
+                olemasNumbrid.add(lahter.value)
             }
             //check the different numbers and the number of the possibilities
             for (j in 0 until dim2) {
@@ -471,7 +464,7 @@ object Logic {
                 if (arvud.size > 0 && olemasNumbrid.contains(j + 1)) {
                     throw FillingException("column " + column + " already has number " + (j + 1) + ", but possibilities exist", game)
                 }
-                if (arvud.size >= 2 && arvud.size <= Main.dim) {
+                if (arvud.size in 2..dim) {
                     val module = HashSet<Int>()
                     for (arv in arvud) {
                         module.add(arv.partition)
@@ -479,7 +472,7 @@ object Logic {
                     //multiple lines is active
                     if (module.size == 1) {
                         val moduleList = ArrayList(module)
-                        for (lahter in getKast(column.partition, moduleList[0], game).cells) {
+                        for (lahter in game.getBox(column.partition, moduleList[0]).cells) {
                             if (lahter.locX != column.modulo) {
                                 if (lahter.numbers.remove(j + 1)) {
                                     somethingDone = true
@@ -488,7 +481,7 @@ object Logic {
                             }
                         }
                         if (somethingDone) {
-                            game.addMessage("column " + column + ": " + (j + 1))
+                            game.addMessage("column $column: ${j + 1}")
                             return true
                         }
                     }
@@ -501,23 +494,23 @@ object Logic {
     private fun filling3(game: Game): Boolean {
         var somethingDone = false
         //naked and hidden pairs, triplets, quarters
-        setLevel(3)
+        game.level = 3
         //box
         for (box in game.boxes) {
-            val lahtridInBoxes: ArrayList<Cell> = arrayToArrayList(box.cells)
+            val lahtridInBoxes: List<Cell> = box.cells
             val emptyLahtrid = ArrayList<Cell>()
             for (lahter in lahtridInBoxes) {
-                if (lahter.getValue() === 0) {
+                if (lahter.value == 0) {
                     emptyLahtrid.add(lahter)
                 }
             }
             if (emptyLahtrid.size > 3) { //naked
                 run {
                     var i = 2
-                    while (i <= Math.ceil(emptyLahtrid.size / 2f.toDouble())) {
+                    while (i <= ceil(emptyLahtrid.size / 2f.toDouble())) {
                         combinations@ for (a in combinations(emptyLahtrid.size, i)) { //you've got the combinations, what now?
                             val chosenOnes = ArrayList<Cell>()
-                            for (index in a as ArrayList<Int>) {
+                            for (index in a) {
                                 chosenOnes.add(emptyLahtrid[index])
                             }
                             //finding naked pairs, triplets, ...
@@ -545,7 +538,7 @@ object Logic {
                             }
                             //TODO check if in a row or a column
                             if (somethingDone) {
-                                game.addMessage("box " + getIntFromLocalLocs(intArrayOf(box.locX, box.locY)).toString() + ": naked " + getCollectionName(i) + " with numbers " + numbers.toString())
+                                game.addMessage("box ${box.index}: naked ${getCollectionName(i)} with numbers $numbers")
                                 return true
                             }
                         }
@@ -556,15 +549,15 @@ object Logic {
 //get unfilled numbers
                 val unfillednumbers = numberSet
                 for (lahter in box.cells) {
-                    unfillednumbers.remove(lahter.getValue())
+                    unfillednumbers.remove(lahter.value)
                 }
-                val numberscontainedinlahters: ArrayList<ArrayList<Int>?> = ArrayList<Any?>()
+                val numberscontainedinlahters: ArrayList<ArrayList<Int>?> = ArrayList()
                 for (i in 0 until dim2) {
                     numberscontainedinlahters.add(ArrayList())
                 }
                 for (index in emptyLahtrid.indices) {
                     val lahter = emptyLahtrid[index]
-                    if (lahter.getValue() === 0) {
+                    if (lahter.value == 0) {
                         for (numbrid in lahter.numbers) {
                             numberscontainedinlahters[numbrid - 1]!!.add(index)
                         }
@@ -576,7 +569,7 @@ object Logic {
                 while (b < numberscontainedinlahters.size) {
                     if (numberscontainedinlahters[b]!!.isEmpty()) {
                         numberscontainedinlahters.removeAt(b)
-                        numberlist.removeAt(b)
+                        numberlist.remove(b)
                     } else {
                         b++
                     }
@@ -593,11 +586,11 @@ object Logic {
                         if (chosenLahtersIndexes.size > chosenOnesIndexes.size) continue
                         val chosenLahtrid = ArrayList<Cell>()
                         for (index in chosenLahtersIndexes) chosenLahtrid.add(emptyLahtrid[index])
-                        val chosenOnes: HashSet<Int?> = HashSet<Any?>()
+                        val chosenOnes: HashSet<Int> = HashSet()
                         for (arv in chosenOnesIndexes) chosenOnes.add(numberlist[arv])
                         //remove other numbers from chosen lahters
                         for (lahter in chosenLahtrid) {
-                            for (arv in allNumbers) if (!chosenOnes.contains(arv)) if (lahter.numbers.remove(arv)) somethingDone = true
+                            for (arv in numberlist) if (!chosenOnes.contains(arv)) if (lahter.numbers.remove(arv)) somethingDone = true
                         }
                         //TODO add check if inside a row or a column
 //remove the numbers from the other lahtrid in the same row
@@ -608,7 +601,7 @@ object Logic {
                             for (usedNumber in chosenOnes) if (lahter.numbers.remove(usedNumber)) somethingDone = true
                         }
                         if (somethingDone) {
-                            game.addMessage("box " + getIntFromLocalLocs(intArrayOf(box.locX, box.locY)).toString() + ": hidden " + getCollectionName(i) + " with numbers " + chosenOnes.toString())
+                            game.addMessage("box ${box.index}: hidden ${getCollectionName(i)} with numbers $chosenOnes")
                             return true
                         }
                     }
@@ -618,11 +611,11 @@ object Logic {
         }
         //TODO add puzzle level to the game, after that use filtering to filter out more complex
 //rows
-        for (row in 1..dim2) {
-            val lahtridInRow = getRow(row, game)
+        for (rowIndex in 1..dim2) {
+            val lahtridInRow = game row rowIndex
             val emptyLahtrid = ArrayList<Cell>()
             for (lahter in lahtridInRow) {
-                if (lahter.getValue() === 0) {
+                if (lahter.value == 0) {
                     emptyLahtrid.add(lahter)
                 }
             }
@@ -645,7 +638,7 @@ object Logic {
                                     }
                                 }
                             }
-                            //remove the numbers from the other lahtrid in the same row
+                            //remove the numbers from the other lahtrid in the same rowIndex
                             lahtrid@ for (lahter in emptyLahtrid) {
                                 for (lahter1 in chosenOnes) {
                                     if (lahter == lahter1) {
@@ -659,7 +652,7 @@ object Logic {
                                 }
                             }
                             if (somethingDone) {
-                                game.addMessage("row " + row + ": naked " + getCollectionName(i) + " with numbers " + numbers.toString())
+                                game.addMessage("rowIndex " + rowIndex + ": naked " + getCollectionName(i) + " with numbers " + numbers.toString())
                                 return true
                             }
                         }
@@ -669,18 +662,18 @@ object Logic {
                 //hidden
 //get unfilled numbers
                 val unfillednumbers = numberSet
-                for (lahter in getRow(row, game)) {
-                    unfillednumbers.remove(lahter.getValue())
+                for (lahter in game row rowIndex) {
+                    unfillednumbers.remove(lahter.value)
                 }
-                val numberscontainedinlahters: ArrayList<ArrayList<Int>?> = ArrayList<Any?>()
+                val numberscontainedinlahters: ArrayList<ArrayList<Int>> = ArrayList()
                 for (i in 0 until dim2) {
                     numberscontainedinlahters.add(ArrayList())
                 }
                 for (index in emptyLahtrid.indices) {
                     val lahter = emptyLahtrid[index]
-                    if (lahter.getValue() === 0) {
+                    if (lahter.value == 0) {
                         for (numbrid in lahter.numbers) {
-                            numberscontainedinlahters[numbrid - 1]!!.add(index)
+                            numberscontainedinlahters[numbrid - 1].add(index)
                         }
                     }
                 }
@@ -711,9 +704,9 @@ object Logic {
                         for (arv in chosenOnesIndexes) chosenOnes.add(numberlist[arv])
                         //remove other numbers from chosen lahters
                         for (lahter in chosenLahtrid) {
-                            for (arv in allNumbers) if (!chosenOnes.contains(arv)) if (lahter.numbers.remove(arv)) somethingDone = true
+                            for (arv in numberlist) if (!chosenOnes.contains(arv)) if (lahter.numbers.remove(arv)) somethingDone = true
                         }
-                        //remove the numbers from the other lahtrid in the same row
+                        //remove the numbers from the other lahtrid in the same rowIndex
                         lahtrid@ for (lahter in emptyLahtrid) {
                             for (lahter1 in chosenLahtrid) {
                                 if (lahter == lahter1) continue@lahtrid
@@ -722,7 +715,7 @@ object Logic {
                         }
                         //TODO check if inside a box
                         if (somethingDone) {
-                            game.addMessage("row " + row.toString() + ": hidden " + getCollectionName(i) + " with numbers " + chosenOnes.toString())
+                            game.addMessage("rowIndex " + rowIndex.toString() + ": hidden " + getCollectionName(i) + " with numbers " + chosenOnes.toString())
                             return true
                         }
                     }
@@ -732,10 +725,10 @@ object Logic {
         }
         //columns
         for (column in 1..dim2) {
-            val lahtridInColumn = getColumn(column, game)
+            val lahtridInColumn = game column column
             val emptyLahtrid = ArrayList<Cell>()
             for (lahter in lahtridInColumn) {
-                if (lahter.getValue() === 0) {
+                if (lahter.value == 0) {
                     emptyLahtrid.add(lahter)
                 }
             }
@@ -782,18 +775,18 @@ object Logic {
                 //hidden
 //get unfilled numbers
                 val unfillednumbers = numberSet
-                for (lahter in getColumn(column, game)) {
-                    unfillednumbers.remove(lahter.getValue())
+                for (lahter in game column column) {
+                    unfillednumbers.remove(lahter.value)
                 }
-                val numberscontainedinlahters: ArrayList<ArrayList<Int>?> = ArrayList<Any?>()
+                val numberscontainedinlahters: ArrayList<ArrayList<Int>> = ArrayList()
                 for (i in 0 until dim2) {
                     numberscontainedinlahters.add(ArrayList())
                 }
                 for (index in emptyLahtrid.indices) {
                     val lahter = emptyLahtrid[index]
-                    if (lahter.getValue() === 0) {
+                    if (lahter.value == 0) {
                         for (numbrid in lahter.numbers) {
-                            numberscontainedinlahters[numbrid - 1]!!.add(index)
+                            numberscontainedinlahters[numbrid - 1].add(index)
                         }
                     }
                 }
@@ -801,7 +794,7 @@ object Logic {
                 //removes unneeded empty lists (of those numbers that are already filled)
                 var b = 0
                 while (b < numberscontainedinlahters.size) {
-                    if (numberscontainedinlahters[b]!!.isEmpty()) {
+                    if (numberscontainedinlahters[b].isEmpty()) {
                         numberscontainedinlahters.removeAt(b)
                         numberlist.removeAt(b)
                     } else {
@@ -820,10 +813,10 @@ object Logic {
                         if (chosenLahtersIndexes.size > chosenOnesIndexes.size) continue
                         val chosenLahtrid = ArrayList<Cell>()
                         for (index in chosenLahtersIndexes) chosenLahtrid.add(emptyLahtrid[index])
-                        val chosenOnes: HashSet<Int?> = HashSet<Any?>()
+                        val chosenOnes: HashSet<Int> = HashSet()
                         for (arv in chosenOnesIndexes) chosenOnes.add(numberlist[arv])
                         //remove other numbers from chosen lahters
-                        for (lahter in chosenLahtrid) for (arv in allNumbers) if (!chosenOnes.contains(arv)) if (lahter.numbers.remove(arv)) somethingDone = true
+                        for (lahter in chosenLahtrid) for (arv in numberSet) if (!chosenOnes.contains(arv)) if (lahter.numbers.remove(arv)) somethingDone = true
                         //remove the numbers from the other lahtrid in the same row
                         lahtrid@ for (lahter in emptyLahtrid) {
                             for (lahter1 in chosenLahtrid) if (lahter == lahter1) continue@lahtrid
@@ -843,58 +836,29 @@ object Logic {
     }
 
     /**
-     * @param antudCell
+     * @param cell
      * @param game
-     * @param showXY
-     * @param message
+     * @param showMessage
+     * @param messageSuffix
      * @param findNextOnes look for lahtrid with only one choice remaining, ca 3x times faster for computer, less intuitive for people, but more intuitive, if trying to fill
      */
-    private fun afterNumber(antudCell: Cell, game: Game, showXY: Boolean, message: String?, findNextOnes: Boolean) {
-        val XY = getXYFromLocs(arrayOf(intArrayOf(antudCell.box.locX, antudCell.box.locY), intArrayOf(antudCell.locX, antudCell.locY)))
-        val x = XY[0]
-        val y = XY[1]
-        val value = antudCell.getValue()
-        val nextLahtrid = ArrayList<Cell>()
-        if (showXY) game.addMessage("x:$x y:$y value: $value$message")
-        //remove possible numbers in the same row, column and the 3x3 box
-//the same 3x3 box
-        for (lahter in getLahter(x, y, game).box.cells) {
-            lahter.numbers.remove(value)
-            if (findNextOnes) {
-                if (lahter.numbers.size == 1 && lahter.getValue() === 0) {
-                    val onlyValue = lahter.numbers.toTypedArray()[0]
-                    game.addMessage(" (box $y, only choice $onlyValue)")
-                    lahter.setValue(onlyValue)
-                    nextLahtrid.add(lahter)
+    private fun afterNumber(cell: Cell, game: Game, showMessage: Boolean, messageSuffix: String?, findNextOnes: Boolean) {
+        val (x, y) = cell.globalCoords
+        if (showMessage) game.addMessage("x:$x y:$y value: ${cell.value}$messageSuffix")
+        val nextCellsToCheck = (cell.box.cells + (game row y) + (game column x))
+            .distinct()
+            .filter {
+                if (it.value == 0 && it.numbers.size == 1) {
+                    val onlyValue = it.numbers.first()
+                    game.addMessage(" naked single $onlyValue)")
+                    it.numbers.clear()
+                    it.value = onlyValue
+                    return@filter true
                 }
+                false
             }
-        }
-        //same row
-        for (lahter in getRow(y, game)) {
-            lahter.numbers.remove(value)
-            if (findNextOnes) {
-                if (lahter.numbers.size == 1 && lahter.getValue() === 0) {
-                    val onlyValue = lahter.numbers.toTypedArray()[0]
-                    game.addMessage(" (row $y, only choice $onlyValue)")
-                    lahter.setValue(onlyValue)
-                    nextLahtrid.add(lahter)
-                }
-            }
-        }
-        //same column
-        for (lahter in getColumn(x, game)) {
-            lahter.numbers.remove(value)
-            if (findNextOnes) {
-                if (lahter.numbers.size == 1 && lahter.getValue() === 0) {
-                    val onlyValue = lahter.numbers.toTypedArray()[0]
-                    game.addMessage(" (column $x, only choice $onlyValue)")
-                    lahter.setValue(onlyValue)
-                    nextLahtrid.add(lahter)
-                }
-            }
-        }
-        for (lahter in nextLahtrid) {
-            afterNumber(lahter, game, true, lahter.message, findNextOnes)
+        nextCellsToCheck.forEach {
+            afterNumber(it, game, showMessage, null, findNextOnes)
         }
     }
 
@@ -902,64 +866,39 @@ object Logic {
         return if (a <= collectionNames.size + 1) collectionNames[a - 2] else "$a-uplet"
     }
 
-    private fun setLevel(level: Int) {
-        Logic.level = level
-    }
-
-    private fun copyGame(game: Game): Game {
-        val clone = newBoxes()
-        for (i in 0 until dim2) {
-            for (j in 0 until dim2) {
-                clone[i]!!.cells[j].setValue(game.boxes[i].cells[j].getValue())
-                clone[i]!!.cells[j].numbers = copyHashSet(game.boxes[i].cells[j].numbers)
-            }
-        }
-        return Game(clone, game.messages)
-    }
-
     private fun copyList(`in`: ArrayList<Int>): ArrayList<Int> {
         return ArrayList(`in`)
     }
 
-    private fun copyHashSet(set: HashSet<Int>): HashSet<Int?> {
-        return HashSet<Any?>(Arrays.asList(*set.toArray(arrayOf<Int>())))
-    }
-
     private fun printSidewaysGrid(game1: Game, game2: Game) {
-        for (kastY in 1..Main.dim) {
-            for (lahterY in 1..Main.dim) {
-                for (kastX in 1..Main.dim) {
-                    for (lahterX in 1..Main.dim) {
-                        var value: Int
-                        value = getKast(kastX, kastY, game1).getLahter(lahterX, lahterY).getValue()
-                        if (value == 0) {
-                            printSpaceBefore("*")
-                        } else if (value > 9) {
-                            printNoSpace(value)
-                        } else {
-                            printSpaceBefore(value)
-                        }
+        for (kastY in 1..dim) {
+            for (lahterY in 1..dim) {
+                for (kastX in 1..dim) {
+                    for (lahterX in 1..dim) {
+                        val value = game1.getCell(Coords(kastX, kastY), Coords(lahterX, lahterY)).value
+                        print(when {
+                            value == 0 -> " *"
+                            value > 9 -> value
+                            else -> " $value"
+                        })
                     }
                     print(" ")
                 }
                 print("        ")
-                for (kastX in 1..Main.dim) {
-                    for (lahterX in 1..Main.dim) {
-                        var value: Int
-                        value = getKast(kastX, kastY, game2).getLahter(lahterX, lahterY).getValue()
-                        if (value == 0) {
-                            printSpaceBefore("*")
-                        } else if (value > 9) {
-                            printNoSpace(value)
-                        } else {
-                            printSpaceBefore(value)
-                        }
+                for (kastX in 1..dim) {
+                    for (lahterX in 1..dim) {
+                        val value = game2.getCell(Coords(kastX, kastY), Coords(lahterX, lahterY)).value
+                        print(when {
+                            value == 0 -> " *"
+                            value > 9 -> value
+                            else -> " $value"
+                        })
                     }
                     print(" ")
                 }
-                newLine()
+                println()
             }
-            newLine()
+            println()
         }
     }
 
@@ -969,105 +908,34 @@ object Logic {
      */
     fun printSolutions(printSolutionSteps: Boolean, printOnlyUnsolvable: Boolean) {
         for (i in 0 until gamesAmount) {
-            if (!printOnlyUnsolvable || printOnlyUnsolvable && !solutions[i].solved) {
+            if (!printOnlyUnsolvable || printOnlyUnsolvable && !solutions[i].isSolved) {
                 if (printSolutionSteps) {
                     for (j in solutions[i].messages.indices) {
                         val message = solutions[i].messages[j]
                         if (!message.contains("Logic")) {
-                            val index = Integer.toString(j)
-                            print(String(CharArray(5 - index.length)).replace('\u0000', ' ') + index + ": ")
+                            val index = j.toString()
+                            print("${" ".repeat(5 - index.length)}$index: ")
                         }
                         println(message)
                     }
                 }
-                newLine()
+                println()
                 printSidewaysGrid(puzzles[i], solutions[i])
-                newLine()
+                println()
                 println("----------------------------------------------------------------")
             }
         }
     }
 
-    /**
-     * @param file for example: /src/level4-10000.txt
-     * @return string of contents
-     */
-    @Throws(FileNotFoundException::class)
-    private fun readTextFromFile(file: File): ArrayList<String> {
-        return try {
-            val scan = Scanner(file)
-            val lines = ArrayList<String>()
-            while (scan.hasNextLine()) {
-                lines.add(scan.nextLine())
-            }
-            //            println("File read successfully!");
-            lines
-        } catch (e: FileNotFoundException) {
-            throw FileNotFoundException()
-        }
-    }
-
-    /**
-     * @param locX 1-3
-     * @param locY 1-3
-     * @return Box
-     */
-    private fun genKast(locX: Int, locY: Int): Box {
-        val lahtrid = arrayOfNulls<Cell>(dim2)
-        for (i in 0 until dim2) { //dim2 korda tee Lahter
-            lahtrid[i] = Cell(i % Main.dim + 1, i / Main.dim + 1, numberSet, 0, null)
-        }
-        val box = Box(locX, locY, lahtrid, Main.dim)
-        for (lahter in lahtrid) {
-            lahter!!.box = box
-        }
-        return box
-    }
-
     val numberSet: HashSet<Int>
         get() = (1..dim2).toHashSet()
 
-    val numberList: List<Int>
-        get() = (1..dim2).toList()
+    val numberList: MutableList<Int>
+        get() = (1..dim2).toMutableList()
 
-    private fun getRow(y: Int, game: Game): ArrayList<Cell> {
-        val lahtrid = ArrayList<Cell>()
-        for (box in game.boxes) {
-            for (lahter in box.cells) {
-                if (box.locY == (y - 1) / Main.dim + 1 && lahter.locY == (y - 1) % Main.dim + 1) {
-                    lahtrid.add(lahter)
-                }
-            }
-        }
-        return lahtrid
-    }
+    private fun combinations(sample: Int, maxLen: Int): ArrayList<ArrayList<Int>> {
 
-    private fun getColumn(x: Int, game: Game): ArrayList<Cell> {
-        val lahtrid = ArrayList<Cell>()
-        for (box in game.boxes) {
-            for (lahter in box.cells) {
-                if (box.locX == (x - 1) / Main.dim + 1 && lahter.locX == (x - 1) % Main.dim + 1) {
-                    lahtrid.add(lahter)
-                }
-            }
-        }
-        return lahtrid
-    }
-
-    private fun checkFilled(game: Game): Boolean {
-        for (box in game.boxes) {
-            for (lahter in box.cells) {
-                if (lahter.getValue() === 0) {
-                    return false
-                }
-            }
-        }
-        return true
-    }
-
-    private fun combinations(sample: Int, maxLen: Int): ArrayList<Int> {
-
-        fun _combsFindNext(last: ArrayList<Int>, lastInt: Int, results: ArrayList<Int>, sample: Int, level: Int, maxLevel: Int): ArrayList<Int> {
+        fun _combsFindNext(last: ArrayList<Int>, lastInt: Int, results: ArrayList<ArrayList<Int>>, sample: Int, level: Int, maxLevel: Int): ArrayList<ArrayList<Int>> {
             var level = level
             level++
             if (level < maxLevel) {
@@ -1082,65 +950,8 @@ object Logic {
             return results
         }
 
-        val results = ArrayList<Int>()
+        val results = ArrayList<ArrayList<Int>>()
         return _combsFindNext(ArrayList(), -1, results, sample, -1, maxLen)
     }
-
-
-
-    /**
-     * @param locX 1-3
-     * @param locY 1-3
-     * @return Box
-     */
-    private fun getKast(locX: Int, locY: Int, game: Game): Box {
-        return game.boxes[(locY - 1) * Main.dim + locX - 1]
-    }
-
-    private fun getKast(loc: IntArray, game: Game): Box {
-        return game.boxes[(loc[1] - 1) * Main.dim + loc[0] - 1]
-    }
-
-    private fun getKast(ind: Int, game: Game): Box {
-        return game.boxes[ind - 1]
-    }
-
-
-
-    /**
-     * @param val 1-9
-     * @return x = 1-3, y = 1-3
-     */
-//    fun getXYFromInt(`val`: Int): IntArray {
-//        return intArrayOf((`val` - 1) % Main.dim + 1, (`val` - 1) / Main.dim + 1)
-//    }
-
-    /**
-     *
-     * @param locs [x 1-dim, y 1-dim]
-     * @return 1-dim2
-     */
-//    fun getIntFromLocalLocs(locs: IntArray): Int {
-//        return (locs[1] - 1) * Main.dim + locs[0]
-//    }
-
-    /**
-     * @param x 1-9
-     * @param y 1-9
-     * @return [[kastX 1-3, kastY 1-3],[lahterX 1-3, lahterY 1-3]]
-     */
-//    private fun getLocsFromXY(x: Int, y: Int): Array<IntArray> {
-//        val kastX = (x - 1) / Main.dim + 1
-//        val kastY = (y - 1) / Main.dim + 1
-//        val lahterX = x - (kastX - 1) * Main.dim
-//        val lahterY = y - (kastY - 1) * Main.dim
-//        return arrayOf(intArrayOf(kastX, kastY), intArrayOf(lahterX, lahterY))
-//    }
-
-//    private fun getXYFromLocs(locs: Array<IntArray>): IntArray {
-//        val kastXY = locs[0]
-//        val lahterXY = locs[1]
-//        return intArrayOf((kastXY[0] - 1) * Main.dim + lahterXY[0], (kastXY[1] - 1) * Main.dim + lahterXY[1])
-//    }
 
 }

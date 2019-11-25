@@ -3,7 +3,7 @@ package sudokusolver
 import sudokusolver.Main.dim
 import sudokusolver.Main.dim2
 
-class Box(index: Int)
+data class Box(val index: Int)
 /**
  *
  * @param locX 1-dim
@@ -14,38 +14,38 @@ class Box(index: Int)
  */
 {
 
-    val locX: Int = index.modulo
-    val locY: Int = index.partition
-    val cells: Array<Cell> = (1..dim2).map { Cell(it.modulo, it.partition, this) }.toTypedArray()
-
-    val index: Int
-        get() = coords.linear
+    val cells: List<Cell> = (1..dim2).map { Cell(it.modulo, it.partition, this) }
 
     val coords: Coords
-        get() = Coords(locX, locY)
+        get() = Coords(index.modulo, index.partition)
+
+    val locX: Int
+        get() = index.modulo
+
+    val locY: Int
+        get() = index.partition
 
     fun getCell(coords: Coords): Cell = getCell(coords.linear)
 
-    fun getCell(index: Int): Cell = cells[index]
+    fun getCell(index: Int): Cell = cells[index - 1]
+
+    operator fun get(index: Int) = getCell(index)
 
     operator fun contains(value: Int): Boolean = cells.any { it.value == value }
 
+    operator fun contains(cell: Cell): Boolean = cell in cells
+
     fun toPrettyString(cellPossibilities: Boolean = false, border: Boolean = false): String {
-        val width: Int
         val rows = if (cellPossibilities) {
-            width = 3
-            cells.map { cell -> arrayOf("   ", " ${cell.value.toString().replace("0", " ")} ", "   ") }
-        } else {
             val rows = cells.map { it.toPrettyString().split("\n").toTypedArray() }
-            width = rows[0][0].length
             rows
+        } else {
+            cells.map { cell -> arrayOf(" ".repeat(dim), " ${cell.value.toString().replace("0", " ")} ", " ".repeat(dim)) }
         }
 
-        val inside = (1..dim).joinToString(separator = "\n{}\n".format(
-            "-".repeat(width) * dim joinWith "+"
-        )) { cellY ->
-            (1..width).joinToString(separator = "\n") { matrixY ->
-                (1..dim).joinToString(separator = "¦") { cellX ->
+        val inside = (1..dim).joinToString("\n${"-".repeat(dim) * dim joinWith "+"}\n") { cellY ->
+            (1..dim).joinToString("\n") { matrixY ->
+                (1..dim).joinToString("¦") { cellX ->
                     rows[(cellY - 1) * dim + cellX - 1][matrixY - 1]
                 }
             }
@@ -54,20 +54,15 @@ class Box(index: Int)
         return if (!border) {
             inside
         } else {
-            "{}\n{}\n{}".format(
-                "╔{}╗\n".format(
-                    "=".repeat(width) * dim joinWith "╤"
-                ),
+            "%s\n%s\n%s".format(
+                "╔${"=".repeat(dim) * dim joinWith "╤"}╗",
                 inside.split("\n").mapIndexed { index, line ->
-                    if (index % width == 0) "╟$line╢" else "║$line║"
+                    if (index % dim == 0) "╟$line╢" else "║$line║"
                 } joinWith "\n",
-                "\n╚{}╝".format(
-                    "=".repeat(width) * dim joinWith "╧"
-                )
+                "╚${"=".repeat(dim) * dim joinWith "╧"}╝"
             )
         }
 
     }
 
-    fun generateCells() : Array<Cell> = (1..dim2).map { Cell(it.modulo, it.partition, this) }.toTypedArray()
 }
