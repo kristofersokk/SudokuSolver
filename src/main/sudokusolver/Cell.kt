@@ -3,7 +3,7 @@ package sudokusolver
 import sudokusolver.Main.dim
 import sudokusolver.Main.dim2
 
-data class Cell(val locX: Int, val locY: Int, val box: Box, val givenValue: Int = 0, var numbers: HashSet<Int> = Logic.numberSet)
+data class Cell(val locX: Int, val locY: Int, val box_locX: Int, val box_locY: Int, val givenValue: Int = 0, var numbers: HashSet<Int> = Logic.numberSet)
 
 /**
  *
@@ -27,6 +27,11 @@ data class Cell(val locX: Int, val locY: Int, val box: Box, val givenValue: Int 
             numbers = HashSet()
         }
 
+    val globalCoords: GlobalCoords
+        get() = GlobalCoords((box_locX - 1) * dim + locX, (box_locY - 1) * dim + locY)
+
+    fun box(game: Game): Box = game.getBox(box_locX, box_locY)
+
     operator fun contains(number: Int) = number in numbers
 
     fun toPrettyString(): String {
@@ -39,8 +44,7 @@ data class Cell(val locX: Int, val locY: Int, val box: Box, val givenValue: Int 
         return second
     }
 
-    val globalCoords: GlobalCoords
-        get() = GlobalCoords((box.locX - 1) * dim + locX, (box.locY - 1) * dim + locY)
+    fun deepCopy(): Cell = copy(numbers = numbers.toHashSet(), givenValue = value)
 
 }
 
@@ -56,5 +60,5 @@ fun Collection<Cell>.checkForErrors(game: Game) {
 operator fun Collection<Cell>.contains(number: Int) =
     number in this.map { it.value }
 
-fun Collection<Cell>.possibilities() : Map<Int, List<Cell>> =
-    (1..dim2).associateWith { number -> this.filter { number in it } }
+fun Collection<Cell>.possibilities(): Map<Int, List<Cell>> =
+    (1..dim2).associateWith { number -> this.filter { number in it.numbers } }

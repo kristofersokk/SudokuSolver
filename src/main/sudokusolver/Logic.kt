@@ -3,7 +3,6 @@ package sudokusolver
 import sudokusolver.Main.dim
 import sudokusolver.Main.dim2
 import sudokusolver.Main.findNextOnes
-import sudokusolver.Main.sameBoxFirst
 import java.awt.BorderLayout
 import java.awt.Dimension
 import javax.swing.JFrame
@@ -21,7 +20,7 @@ object Logic {
     private val solutions = ArrayList<Game>()
 
     private fun createAndShowGUI() {
-        val frame = JFrame("Loogika")
+        val frame = JFrame("Logic")
         frame.defaultCloseOperation = WindowConstants.EXIT_ON_CLOSE
         val label = JLabel("A new label")
         label.preferredSize = Dimension(400, 200)
@@ -62,28 +61,22 @@ object Logic {
      * @param unsolved the original boxes after reading in the information
      * updates puzzles, solutions, gamesAmount and solutionsAmount
      */
-    fun startFilling(unsolved: Game) {
-        val solvedGame = unsolved.copy()
-        solvedGame.allCells.forEach { println(it.value) }
-        initialLoading(solvedGame)
-        println(solvedGame.toPrettyString(true))
+    fun startFilling(unsolved: Game): Game {
+        initialLoading(unsolved)
+        val solvedGame = unsolved.deepcopy()
         //println(solved.toString());
         try {
             continuousFilling(solvedGame)
         } catch (e: FillingException) {
+            println("There was an error while solving, sudoku probably doesn't have a solution")
             e.printStackTrace()
             //            try {
 //                Thread.sleep(20);
 //            } catch (InterruptedException e1) {
 //                e1.printStackTrace();
 //            }
-            e.game.allCells.forEach {
-                println("value: ${it.value}, numbers: ${it.numbers}")
-            }
             printSidewaysGrid(unsolved, e.game)
-            for (message in e.game.messages) {
-                println(message)
-            }
+            e.game.messages.forEach(::println)
         } catch (finishedException: FinishedException) {
             puzzles.add(unsolved)
             solutions.add(solvedGame)
@@ -94,15 +87,14 @@ object Logic {
                 solutionsAmount++
                 solvedGame.isSolved = true
             }
-            //            println(solved.kastid[0]);
-//            println(solved);
         }
+        return solvedGame
     }
 
     private fun initialLoading(game: Game) {
         game.allCells.forEach { cell ->
             if (cell.value > 0) {
-                afterNumber(cell, game, false, null, findNextOnes)
+                afterNumber(cell, game, false, null, false)
             }
         }
     }
@@ -289,9 +281,9 @@ object Logic {
                     // candidate line (row) is active
                     if (moduleRow.size == 1) {
                         val moduleList = ArrayList(moduleRow)
-                        for (lahter in game.row((box.locY - 1) * dim + moduleList[0])) {
-                            if (lahter.box != box) {
-                                if (lahter.numbers.remove(j + 1)) {
+                        for (cell in game.row((box.locY - 1) * dim + moduleList[0])) {
+                            if (cell.box(game) != box) {
+                                if (cell.numbers.remove(j + 1)) {
                                     somethingDone = true
                                     //                                    println("vs3 row", (box.locY-1)*3+moduleList.get(0));
                                 }
@@ -310,9 +302,9 @@ object Logic {
                     // candidate line (column) is active
                     if (moduleColumn.size == 1) {
                         val moduleList = ArrayList(moduleColumn)
-                        for (lahter in game.column((box.locX - 1) * dim + moduleList[0])) {
-                            if (lahter.box != box) {
-                                if (lahter.numbers.remove(j + 1)) {
+                        for (cell in game.column((box.locX - 1) * dim + moduleList[0])) {
+                            if (cell.box(game) != box) {
+                                if (cell.numbers.remove(j + 1)) {
                                     somethingDone = true
                                     //                                    println("vs3 column", (box.locX-1)*3+moduleList.get(0));
                                 }
@@ -461,8 +453,8 @@ object Logic {
                             }
                             //finding naked pairs, triplets, ...
                             val numbers = HashSet<Int>()
-                            for (lahter in chosenOnes) {
-                                for (index in lahter.numbers) {
+                            for (cell in chosenOnes) {
+                                for (index in cell.numbers) {
                                     numbers.add(index)
                                     if (numbers.size > i) { //not a hidden pair
                                         continue@combinations
@@ -470,14 +462,14 @@ object Logic {
                                 }
                             }
                             //remove the numbers from the other lahtrid in the same box
-                            lahtrid@ for (lahter in emptyLahtrid) {
+                            lahtrid@ for (cell in emptyLahtrid) {
                                 for (lahter1 in chosenOnes) {
-                                    if (lahter == lahter1) {
+                                    if (cell == lahter1) {
                                         continue@lahtrid
                                     }
                                 }
                                 for (usedNumber in numbers) {
-                                    if (lahter.numbers.remove(usedNumber)) {
+                                    if (cell.numbers.remove(usedNumber)) {
                                         somethingDone = true
                                     }
                                 }
@@ -689,8 +681,8 @@ object Logic {
                             }
                             //finding naked pairs, triplets, ...
                             val numbers = HashSet<Int>()
-                            for (lahter in chosenOnes) {
-                                for (index in lahter.numbers) {
+                            for (cell in chosenOnes) {
+                                for (index in cell.numbers) {
                                     numbers.add(index)
                                     if (numbers.size > i) { //not a hidden pair
                                         continue@combinations
@@ -698,14 +690,14 @@ object Logic {
                                 }
                             }
                             //remove the numbers from the other lahtrid in the same row
-                            lahtrid@ for (lahter in emptyLahtrid) {
+                            lahtrid@ for (cell in emptyLahtrid) {
                                 for (lahter1 in chosenOnes) {
-                                    if (lahter == lahter1) {
+                                    if (cell == lahter1) {
                                         continue@lahtrid
                                     }
                                 }
                                 for (usedNumber in numbers) {
-                                    if (lahter.numbers.remove(usedNumber)) {
+                                    if (cell.numbers.remove(usedNumber)) {
                                         somethingDone = true
                                     }
                                 }
@@ -790,19 +782,15 @@ object Logic {
      */
     private fun afterNumber(cell: Cell, game: Game, showMessage: Boolean, messageSuffix: String?, findNextOnes: Boolean) {
         val (x, y) = cell.globalCoords
-        if (showMessage) game.addMessage("x:$x y:$y value: ${cell.value}${messageSuffix ?: ""}")
-        if (findNextOnes) {
-            (cell.box.cells + (game row y) + (game column x))
-                .distinct()
-                .filter {
-                    if (it.value == 0 && it.numbers.size == 1) {
-                        val onlyValue = it.numbers.first()
-                        it.value = onlyValue
-                        afterNumber(it, game, true, null, findNextOnes)
-                        return@filter true
-                    }
-                    false
-                }
+        if (showMessage) game.addMessage("x:$x y:$y value: ${cell.value}$messageSuffix")
+        (cell.box(game).cells + (game row y) + (game column x)).distinct().forEach {
+            it.numbers.remove(cell.value)
+            if (findNextOnes && it.value == 0 && it.numbers.size == 1) {
+                val onlyValue = it.numbers.first()
+                game.addMessage(" naked single $onlyValue)")
+                it.value = onlyValue
+                afterNumber(it, game, showMessage, null, findNextOnes)
+            }
         }
     }
 

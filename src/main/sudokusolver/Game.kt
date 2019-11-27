@@ -4,7 +4,7 @@ import sudokusolver.Main.dim
 import sudokusolver.Main.dim2
 import java.io.File
 
-data class Game(val boxes: Array<Box> = generateBoxes(), val messages: ArrayList<String> = ArrayList()) {
+data class Game(val boxes: List<Box> = generateBoxes(), val messages: ArrayList<String> = ArrayList()) {
 
     var isSolved = false
 
@@ -14,9 +14,7 @@ data class Game(val boxes: Array<Box> = generateBoxes(), val messages: ArrayList
     val allCells: List<Cell>
         get() = boxes.flatMap { it.cells }
 
-    fun solve() {
-        Logic.startFilling(this)
-    }
+    fun solve() = Logic.startFilling(this)
 
     fun addMessage(message: String) {
         if (prevLevel != level) {
@@ -24,6 +22,8 @@ data class Game(val boxes: Array<Box> = generateBoxes(), val messages: ArrayList
             prevLevel = level
         }
         messages.add(message)
+        println(message)
+        println(toPrettyString(true))
     }
 
     fun checkFilled(): Boolean {
@@ -47,22 +47,20 @@ data class Game(val boxes: Array<Box> = generateBoxes(), val messages: ArrayList
 
         val renderScale = if (dim2 <= 9) 1.1f else 2.1f
 
-        fun generateBoxes(): Array<Box> {
-            return (1..dim2).map { Box(it) }.toTypedArray()
+        fun generateBoxes(): List<Box> {
+            return (1..dim2).map { Box(it) }.toList()
         }
 
         fun solveSudokuString(sudoku: String): Game {
             val game = Game()
             game.importFromString(sudoku)
-            game.solve()
-            return game
+            return game.solve()
         }
 
         fun solveSudokuFromFile(level: Int, index: Int): Game {
             val game = Game()
             game.importFromFile(level, index)
-            game.solve()
-            return game
+            return game.solve()
         }
 
         fun solveMultipleFromFile(level: Int, start: Int, stop: Int): List<Game> {
@@ -72,7 +70,6 @@ data class Game(val boxes: Array<Box> = generateBoxes(), val messages: ArrayList
                 val game = Game()
                 game.importFromString(lines[it])
                 game.solve()
-                game
             }
         }
     }
@@ -83,14 +80,14 @@ data class Game(val boxes: Array<Box> = generateBoxes(), val messages: ArrayList
         println(width)
         return (0 until dim).joinToString("\n") { boxY ->
             (0 until width).joinToString("\n") { rowY ->
-                boxesRows.subList(boxY, boxY + dim).joinToString("") { it[rowY] }
+                boxesRows.subList(boxY * dim, boxY * dim + dim).joinToString("") { it[rowY] }
             }
         }
     }
 
     /**
      *
-     * @param level level 1-7
+     * @param level level 1-6
      * @param index index 1-10000
      */
     private fun importFromFile(level: Int, index: Int) {
@@ -108,7 +105,6 @@ data class Game(val boxes: Array<Box> = generateBoxes(), val messages: ArrayList
                 val ch = info[(y - 1) * dim2 + x - 1].toLowerCase()
                 if (ch.isDigit()) {
                     cell.value = ch.numericValue
-                    println("value: ${cell.value} size: ${cell.numbers.size}")
                 } else {
                     if (ch.isLetter()) {
                         cell.value = ch.toInt() - 87
@@ -137,5 +133,8 @@ data class Game(val boxes: Array<Box> = generateBoxes(), val messages: ArrayList
         val (boxCoords, cellCoords) = globalCoords.toBoxAndCellCoords()
         return getCell(boxCoords, cellCoords)
     }
+
+    fun deepcopy(): Game =
+        Game(boxes = boxes.map { it.deepCopy() }.toList(), messages = messages.map { String(it.toCharArray()) }.toMutableList() as ArrayList<String>)
 
 }

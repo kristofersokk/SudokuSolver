@@ -3,7 +3,7 @@ package sudokusolver
 import sudokusolver.Main.dim
 import sudokusolver.Main.dim2
 
-data class Box(val index: Int)
+data class Box(val index: Int, val cells: List<Cell> = (1..dim2).map { Cell(it.modulo, it.partition, index.modulo, index.partition) })
 /**
  *
  * @param locX 1-dim
@@ -13,9 +13,6 @@ data class Box(val index: Int)
  * @param dim the dimensions of box
  */
 {
-
-    val cells: List<Cell> = (1..dim2).map { Cell(it.modulo, it.partition, this) }
-
     val coords: Coords
         get() = Coords(index.modulo, index.partition)
 
@@ -64,5 +61,7 @@ data class Box(val index: Int)
         }
 
     }
+
+    fun deepCopy(): Box = copy(cells = cells.map { it.deepCopy() })
 
 }
