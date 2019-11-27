@@ -43,9 +43,9 @@ data class Box(val index: Int)
             cells.map { cell -> arrayOf(" ".repeat(dim), " ${cell.value.toString().replace("0", " ")} ", " ".repeat(dim)) }
         }
 
-        val inside = (1..dim).joinToString("\n${"-".repeat(dim) * dim joinWith "+"}\n") { cellY ->
+        val inside = (1..dim).joinToString("\n${"─".repeat(dim) * dim joinWith "┼"}\n") { cellY ->
             (1..dim).joinToString("\n") { matrixY ->
-                (1..dim).joinToString("¦") { cellX ->
+                (1..dim).joinToString("│") { cellX ->
                     rows[(cellY - 1) * dim + cellX - 1][matrixY - 1]
                 }
             }
@@ -55,11 +55,11 @@ data class Box(val index: Int)
             inside
         } else {
             "%s\n%s\n%s".format(
-                "╔${"=".repeat(dim) * dim joinWith "╤"}╗",
+                "╔${"═".repeat(dim) * dim joinWith "╤"}╗",
                 inside.split("\n").mapIndexed { index, line ->
-                    if (index % dim == 0) "╟$line╢" else "║$line║"
+                    if ((index + 1) % (dim + 1) == 0) "╟$line╢" else "║$line║"
                 } joinWith "\n",
-                "╚${"=".repeat(dim) * dim joinWith "╧"}╝"
+                "╚${"═".repeat(dim) * dim joinWith "╧"}╝"
             )
         }
 

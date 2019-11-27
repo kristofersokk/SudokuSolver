@@ -66,6 +66,7 @@ object Logic {
         val solvedGame = unsolved.copy()
         solvedGame.allCells.forEach { println(it.value) }
         initialLoading(solvedGame)
+        println(solvedGame.toPrettyString(true))
         //println(solved.toString());
         try {
             continuousFilling(solvedGame)
@@ -76,6 +77,9 @@ object Logic {
 //            } catch (InterruptedException e1) {
 //                e1.printStackTrace();
 //            }
+            e.game.allCells.forEach {
+                println("value: ${it.value}, numbers: ${it.numbers}")
+            }
             printSidewaysGrid(unsolved, e.game)
             for (message in e.game.messages) {
                 println(message)
@@ -98,7 +102,7 @@ object Logic {
     private fun initialLoading(game: Game) {
         game.allCells.forEach { cell ->
             if (cell.value > 0) {
-                afterNumber(cell, game, true, null, findNextOnes)
+                afterNumber(cell, game, false, null, findNextOnes)
             }
         }
     }
@@ -109,88 +113,30 @@ object Logic {
         //TODO p''ra ringi, et ta otsiks sama numbrit teistest kastidest enne, siis teisi numbreid
         game.level = 1
         //box
-        if (sameBoxFirst) {
-            var boxIndex = 1
-            while (boxIndex <= dim2) {
-                somethingDone = false
-                val box = game.getBox(boxIndex)
-                val availableSlots = ArrayList<ArrayList<Int>>()
-                val olemasNumbrid = ArrayList<Int>()
-                repeat(dim2) {
-                    availableSlots.add(ArrayList())
+        var boxIndex = 1
+        while (boxIndex <= dim2) {
+            somethingDone = false
+            val box = game.getBox(boxIndex)
+            box.cells.checkForErrors(game)
+            //get the frequency of possibilities of numbers 1-dim2
+            val possibilities = box.cells.possibilities()
+            //check the different numbers and the number of possibilities
+            possibilities.forEach { (number, possibleCells) ->
+                if (possibleCells.isNotEmpty() && number in box) {
+                    throw FillingException("box $boxIndex already has number $number, but possibilities exist", game)
                 }
-                box.cells.forEach { cell ->
-                    if (cell.numbers.size == 0 && cell.value == 0) {
-                        val globalCoords = cell.globalCoords
-                        throw FillingException("lahter at x: ${globalCoords.x}, y: ${globalCoords.y} is empty and without possibilities", game)
-                    }
-                }
-                //get the frequency of possibilities of numbers 1-dim2
-                for (j in 0 until dim2) {
-                    val cell = box.cells[j]
-                    for (a in cell.numbers) {
-                        availableSlots[a - 1].add(j + 1)
-                    }
-                    olemasNumbrid.add(cell.value)
-                }
-                //check the different numbers and the number of possibilities
-                for (j in 0 until dim2) {
-                    val arvud = availableSlots[j]
-                    if (arvud.size > 0 && olemasNumbrid.contains(j + 1)) {
-                        throw FillingException("box $boxIndex already has number ${j + 1}, but possibilities exist", game)
-                    }
-                    if (arvud.size == 1) {
-                        val lahter = box.cells[arvud[0] - 1]
-                        lahter.value = j + 1
-                        afterNumber(lahter, game, true, " (box $boxIndex)", findNextOnes)
-                        somethingDone = true
-                        //                    println("box",j+1);
-                    } else if (arvud.size == 0 && !olemasNumbrid.contains(j + 1)) {
-                        throw FillingException("box $boxIndex doesn't have number ${j + 1} and no possibilities exist", game)
-                    }
-                }
-                if (!somethingDone) {
-                    boxIndex++
+                if (possibleCells.size == 1) {
+                    val cell = possibleCells.first()
+                    cell.value = number
+                    afterNumber(cell, game, true, " (box $boxIndex)", findNextOnes)
+                    somethingDone = true
+                    //                    println("box",j+1);
+                } else if (possibleCells.isEmpty() && number !in box) {
+                    throw FillingException("box $boxIndex doesn't have number $number and no possibilities exist", game)
                 }
             }
-        } else {
-            for (box in game.boxes) {
-                val availableSlots = ArrayList<ArrayList<Int>>()
-                val olemasNumbrid = ArrayList<Int>()
-                for (j in 1..dim2) {
-                    availableSlots.add(ArrayList())
-                }
-                for (j in 0 until dim2) {
-                    val cell = box.cells[j]
-                    if (cell.numbers.size == 0 && cell.value == 0) {
-                        val globalCoords: GlobalCoords = cell.globalCoords
-                        throw FillingException("lahter at x: ${globalCoords.x}, y: ${globalCoords.y} is empty and without possibilities", game)
-                    }
-                }
-                //get the frequency of possibilities of numbers 1-dim2
-                for (j in 0 until dim2) {
-                    val lahter = box.cells[j]
-                    for (a in lahter.numbers) {
-                        availableSlots[a - 1].add(j + 1)
-                    }
-                    olemasNumbrid.add(lahter.value)
-                }
-                //check the different numbers and the number of the possibilities
-                for (j in 0 until dim2) {
-                    val numbers = availableSlots[j]
-                    if (numbers.size > 0 && olemasNumbrid.contains(j + 1)) {
-                        throw FillingException("box ${box.index} already has number ${j + 1}, but possibilities exist", game)
-                    }
-                    if (numbers.size == 1) {
-                        val cell = box.cells[numbers[0] - 1]
-                        cell.value = j + 1
-                        afterNumber(cell, game, true, " (box ${box.index})", findNextOnes)
-                        return true
-                        //                    println("box",j+1);
-                    } else if (numbers.size == 0 && !olemasNumbrid.contains(j + 1)) {
-                        throw FillingException("box ${box.index} doesn't have number ${j + 1} and no possibilities exist", game)
-                    }
-                }
+            if (!somethingDone) {
+                boxIndex++
             }
         }
         if (somethingDone) {
@@ -578,7 +524,7 @@ object Logic {
                 var i = 2
                 while (i < Math.ceil(emptyLahtrid.size / 2f.toDouble())) {
                     for (a in combinations(unfillednumbers.size, i)) { //you've got the combinations, what now?
-                        val chosenOnesIndexes = ArrayList(a as ArrayList<Int>)
+                        val chosenOnesIndexes = ArrayList(a)
                         //collecting lahters needed
                         val chosenLahtersIndexes = HashSet<Int>()
                         for (query in chosenOnesIndexes) chosenLahtersIndexes.addAll(numberscontainedinlahters[query]!!)
@@ -625,7 +571,7 @@ object Logic {
                     while (i <= Math.ceil(emptyLahtrid.size / 2f.toDouble())) {
                         combinations@ for (a in combinations(emptyLahtrid.size, i)) { //you've got the combinations, what now?
                             val chosenOnes = ArrayList<Cell>()
-                            for (index in a as ArrayList<Int>) {
+                            for (index in a) {
                                 chosenOnes.add(emptyLahtrid[index])
                             }
                             //finding naked pairs, triplets, ...
@@ -681,7 +627,7 @@ object Logic {
                 //removes unneeded empty lists (of those numbers that are already filled)
                 var b = 0
                 while (b < numberscontainedinlahters.size) {
-                    if (numberscontainedinlahters[b]!!.isEmpty()) {
+                    if (numberscontainedinlahters[b].isEmpty()) {
                         numberscontainedinlahters.removeAt(b)
                         numberlist.removeAt(b)
                     } else {
@@ -738,7 +684,7 @@ object Logic {
                     while (i <= Math.ceil(emptyLahtrid.size / 2f.toDouble())) {
                         combinations@ for (a in combinations(emptyLahtrid.size, i)) { //you've got the combinations, what now?
                             val chosenOnes = ArrayList<Cell>()
-                            for (index in a as ArrayList<Int>) {
+                            for (index in a) {
                                 chosenOnes.add(emptyLahtrid[index])
                             }
                             //finding naked pairs, triplets, ...
@@ -805,7 +751,7 @@ object Logic {
                 var i = 2
                 while (i < Math.ceil(emptyLahtrid.size / 2f.toDouble())) {
                     for (a in combinations(unfillednumbers.size, i)) { //you've got the combinations, what now?
-                        val chosenOnesIndexes = ArrayList(a as ArrayList<Int>)
+                        val chosenOnesIndexes = ArrayList(a)
                         //collecting lahters needed
                         val chosenLahtersIndexes = HashSet<Int>()
                         for (query in chosenOnesIndexes) chosenLahtersIndexes.addAll(numberscontainedinlahters[query]!!)
@@ -840,25 +786,23 @@ object Logic {
      * @param game
      * @param showMessage
      * @param messageSuffix
-     * @param findNextOnes look for lahtrid with only one choice remaining, ca 3x times faster for computer, less intuitive for people, but more intuitive, if trying to fill
+     * @param findNextOnes look for boxes with only one choice remaining, ca 3x times faster for computer, less intuitive for people, but more intuitive, if trying to fill
      */
     private fun afterNumber(cell: Cell, game: Game, showMessage: Boolean, messageSuffix: String?, findNextOnes: Boolean) {
         val (x, y) = cell.globalCoords
-        if (showMessage) game.addMessage("x:$x y:$y value: ${cell.value}$messageSuffix")
-        val nextCellsToCheck = (cell.box.cells + (game row y) + (game column x))
-            .distinct()
-            .filter {
-                if (it.value == 0 && it.numbers.size == 1) {
-                    val onlyValue = it.numbers.first()
-                    game.addMessage(" naked single $onlyValue)")
-                    it.numbers.clear()
-                    it.value = onlyValue
-                    return@filter true
+        if (showMessage) game.addMessage("x:$x y:$y value: ${cell.value}${messageSuffix ?: ""}")
+        if (findNextOnes) {
+            (cell.box.cells + (game row y) + (game column x))
+                .distinct()
+                .filter {
+                    if (it.value == 0 && it.numbers.size == 1) {
+                        val onlyValue = it.numbers.first()
+                        it.value = onlyValue
+                        afterNumber(it, game, true, null, findNextOnes)
+                        return@filter true
+                    }
+                    false
                 }
-                false
-            }
-        nextCellsToCheck.forEach {
-            afterNumber(it, game, showMessage, null, findNextOnes)
         }
     }
 
@@ -935,8 +879,8 @@ object Logic {
 
     private fun combinations(sample: Int, maxLen: Int): ArrayList<ArrayList<Int>> {
 
-        fun _combsFindNext(last: ArrayList<Int>, lastInt: Int, results: ArrayList<ArrayList<Int>>, sample: Int, level: Int, maxLevel: Int): ArrayList<ArrayList<Int>> {
-            var level = level
+        fun _combsFindNext(last: ArrayList<Int>, lastInt: Int, results: ArrayList<ArrayList<Int>>, sample: Int, givenLevel: Int, maxLevel: Int): ArrayList<ArrayList<Int>> {
+            var level = givenLevel
             level++
             if (level < maxLevel) {
                 for (i in lastInt + 1 until sample) {

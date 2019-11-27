@@ -108,6 +108,7 @@ data class Game(val boxes: Array<Box> = generateBoxes(), val messages: ArrayList
                 val ch = info[(y - 1) * dim2 + x - 1].toLowerCase()
                 if (ch.isDigit()) {
                     cell.value = ch.numericValue
+                    println("value: ${cell.value} size: ${cell.numbers.size}")
                 } else {
                     if (ch.isLetter()) {
                         cell.value = ch.toInt() - 87

@@ -44,7 +44,7 @@ object Main {
             val sudokuString = args[1]
             Game.solveSudokuString(sudokuString)
         } else { //        Game.solveMultipleFromFile(level, 1, 10000);
-            Game.solveSudokuString(testString)
+            Game.solveSudokuString(testString2)
         }
         println(game.toPrettyString(true))
         //        Game.solveMultipleFromFile(1, 1, 10000);
