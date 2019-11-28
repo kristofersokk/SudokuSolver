@@ -1,7 +1,7 @@
 package sudokusolver
 
 import sudokusolver.Main.dim
-import sudokusolver.Main.dim2
+import sudokusolver.logic.Logic
 
 data class Cell(val locX: Int, val locY: Int, val box_locX: Int, val box_locY: Int, val givenValue: Int = 0, var numbers: HashSet<Int> = Logic.numberSet)
 
@@ -27,10 +27,12 @@ data class Cell(val locX: Int, val locY: Int, val box_locX: Int, val box_locY: I
             numbers = HashSet()
         }
 
+    val filled = value > 0
+
     val globalCoords: GlobalCoords
         get() = GlobalCoords((box_locX - 1) * dim + locX, (box_locY - 1) * dim + locY)
 
-    fun box(game: Game): Box = game.getBox(box_locX, box_locY)
+    fun box(game: Game): Box = game.box(box_locX, box_locY)
 
     operator fun contains(number: Int) = number in numbers
 
@@ -60,5 +62,14 @@ fun Collection<Cell>.checkForErrors(game: Game) {
 operator fun Collection<Cell>.contains(number: Int) =
     number in this.map { it.value }
 
-fun Collection<Cell>.possibilities(): Map<Int, List<Cell>> =
-    (1..dim2).associateWith { number -> this.filter { number in it.numbers } }
+fun Collection<Cell>.possibilities() : Map<Int, List<Cell>> =
+    (1..Main.dim2).associateWith { number -> this.filter { number in it.numbers } }
+
+fun Collection<Cell>.possibleCellsFor(number: Int) : List<Cell> =
+    this.filter { number in it.numbers }
+
+enum class CellCollectionType {
+    BOX,
+    ROW,
+    COLUMN;
+}

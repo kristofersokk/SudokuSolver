@@ -1,5 +1,7 @@
 package sudokusolver
 
+import sudokusolver.logic.Logic
+
 object Main {
     const val testString2 = ".5...12.9.6.29....4...6....8.....4.1.73........4............6.4..5......7...8...2"
     const val testString3 = "__ge26___78cad__" +

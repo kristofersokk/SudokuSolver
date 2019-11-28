@@ -1,7 +1,9 @@
 package sudokusolver
 
+import sudokusolver.CellCollectionType.*
 import sudokusolver.Main.dim
 import sudokusolver.Main.dim2
+import sudokusolver.logic.Logic
 import java.io.File
 
 data class Game(val boxes: List<Box> = generateBoxes(), val messages: ArrayList<String> = ArrayList()) {
@@ -22,8 +24,8 @@ data class Game(val boxes: List<Box> = generateBoxes(), val messages: ArrayList<
             prevLevel = level
         }
         messages.add(message)
-        println(message)
-        println(toPrettyString(true))
+//        println(message)
+//        println(toPrettyString(true))
     }
 
     fun checkFilled(): Boolean {
@@ -35,17 +37,17 @@ data class Game(val boxes: List<Box> = generateBoxes(), val messages: ArrayList<
         return true
     }
 
-    infix fun row(y: Int): List<Cell> {
-        return allCells.filter { it.globalCoords.y == y }
-    }
+    infix fun row(y: Int): List<Cell> = allCells.filter { it.globalCoords.y == y }
 
-    infix fun column(x: Int): List<Cell> {
-        return allCells.filter { it.globalCoords.x == x }
-    }
+    infix fun column(x: Int): List<Cell> = allCells.filter { it.globalCoords.x == x }
 
     companion object {
 
-        val renderScale = if (dim2 <= 9) 1.1f else 2.1f
+        val funcsGetCells: Array<Pair<(game: Game, index: Int) -> List<Cell>, CellCollectionType>> = arrayOf(
+            {game: Game, index: Int -> game.box(index).cells} to BOX,
+            {game: Game, index: Int -> game row index} to ROW,
+            {game: Game, index: Int -> game column index} to COLUMN
+        )
 
         fun generateBoxes(): List<Box> {
             return (1..dim2).map { Box(it) }.toList()
@@ -114,15 +116,15 @@ data class Game(val boxes: List<Box> = generateBoxes(), val messages: ArrayList<
         }
     }
 
-    operator fun get(index: Int) = getBox(index)
+    operator fun get(index: Int) = box(index)
 
-    fun getBox(locX: Int, locY: Int): Box = boxes[Coords(locX, locY).linear - 1]
+    fun box(locX: Int, locY: Int): Box = boxes[Coords(locX, locY).linear - 1]
 
-    fun getBox(coords: Coords): Box = boxes[coords.linear - 1]
+    infix fun box(coords: Coords): Box = boxes[coords.linear - 1]
 
-    fun getBox(index: Int): Box = boxes[index - 1]
+    infix fun box(index: Int): Box = boxes[index - 1]
 
-    fun getCell(bLoc: Coords, cLoc: Coords) : Cell = getBox(bLoc).getCell(cLoc)
+    fun getCell(bLoc: Coords, cLoc: Coords) : Cell = box(bLoc).getCell(cLoc)
 
     /**
      * @param x 1-9

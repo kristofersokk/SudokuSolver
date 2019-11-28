@@ -43,4 +43,6 @@ val Int.coords: Coords
 val Pair<Int, Int>.linear: Int
     get() = (second - 1) * dim + first
 
-fun <T> arrayToArrayList(array: Array<T>): List<T> = array.toList()
+inline fun <T> Iterable<T>.applyAll(func: T.() -> Boolean) : List<Boolean> = map { it.func() }
+
+fun Iterable<Boolean>.allTrue() = all { it }

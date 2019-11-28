@@ -1,8 +1,8 @@
-package sudokusolver
+package sudokusolver.logic
 
+import sudokusolver.*
 import sudokusolver.Main.dim
 import sudokusolver.Main.dim2
-import sudokusolver.Main.findNextOnes
 import java.awt.BorderLayout
 import java.awt.Dimension
 import javax.swing.JFrame
@@ -30,26 +30,27 @@ object Logic {
         frame.isVisible = true
     }
 
-    /**
-     * @param game game
-     * @throws FillingException FinishedException
-     */
     @Throws(FillingException::class, FinishedException::class)
     private fun continuousFilling(game: Game) {
         while (true) {
-            if (fillingNormal(game)) {
+            //level 1
+            if (hiddenSingle(game)) {
                 continue
             } else {
                 if (game.checkFilled()) {
                     throw FinishedException(game, true)
                 }
             }
-            if (filling1(game)) {
+            if (nakedSingle(game)) {
                 continue
             }
-            if (filling2(game)) {
+
+            //Level 2
+            if (intersectionRemoval(game)) {
                 continue
             }
+
+            //Level 3
             if (filling3(game)) {
                 continue
             }
@@ -97,336 +98,6 @@ object Logic {
                 afterNumber(cell, game, false, null, false)
             }
         }
-    }
-
-    @Throws(FillingException::class)
-    private fun fillingNormal(game: Game): Boolean {
-        var somethingDone = false
-        //TODO p''ra ringi, et ta otsiks sama numbrit teistest kastidest enne, siis teisi numbreid
-        game.level = 1
-        //box
-        var boxIndex = 1
-        while (boxIndex <= dim2) {
-            somethingDone = false
-            val box = game.getBox(boxIndex)
-            box.cells.checkForErrors(game)
-            //get the frequency of possibilities of numbers 1-dim2
-            val possibilities = box.cells.possibilities()
-            //check the different numbers and the number of possibilities
-            possibilities.forEach { (number, possibleCells) ->
-                if (possibleCells.isNotEmpty() && number in box) {
-                    throw FillingException("box $boxIndex already has number $number, but possibilities exist", game)
-                }
-                if (possibleCells.size == 1) {
-                    val cell = possibleCells.first()
-                    cell.value = number
-                    afterNumber(cell, game, true, " (box $boxIndex)", findNextOnes)
-                    somethingDone = true
-                    //                    println("box",j+1);
-                } else if (possibleCells.isEmpty() && number !in box) {
-                    throw FillingException("box $boxIndex doesn't have number $number and no possibilities exist", game)
-                }
-            }
-            if (!somethingDone) {
-                boxIndex++
-            }
-        }
-        if (somethingDone) {
-            return true
-        }
-        //rows
-        for (row in 1..dim2) {
-            val availableSlots = ArrayList<ArrayList<Int>>()
-            val lahtridInRow = game row row
-            val olemasNumbrid = ArrayList<Int>()
-            for (j in 1..dim2) {
-                availableSlots.add(ArrayList())
-            }
-            for (j in 0 until dim2) {
-                val cell = lahtridInRow[j]
-                val numbers: HashSet<*> = cell.numbers
-                if (numbers.size == 0 && cell.value == 0) {
-                    val globalCoords: GlobalCoords = cell.globalCoords
-                    throw FillingException("lahter at x: ${globalCoords.x}, y: ${globalCoords.y} is empty and without possibilities", game)
-                }
-            }
-            //get the frequency of possibilities of numbers 1-dim2
-            for (j in 0 until dim2) {
-                val cell = lahtridInRow[j]
-                for (a in cell.numbers) {
-                    availableSlots[a - 1].add(j + 1)
-                }
-                olemasNumbrid.add(cell.value)
-            }
-            //check the different numbers and the number of the possibilities
-            for (j in 0 until dim2) {
-                val arvud = availableSlots[j]
-                if (arvud.size > 0 && j + 1 in olemasNumbrid) {
-                    throw FillingException("row " + row + " already has number " + (j + 1) + ", but possibilities exist", game)
-                }
-                if (arvud.size == 1) {
-                    val cell = game.getCell(GlobalCoords(arvud[0], row))
-                    cell.value = j + 1
-                    afterNumber(cell, game, true, " (row $row)", findNextOnes)
-                    return true
-                    //                    println("row",j+1);
-                } else if (arvud.size == 0 && j + 1 !in olemasNumbrid) {
-                    throw FillingException("row " + row + " doesn't have number " + (j + 1) + " and no possibilities exist", game)
-                }
-            }
-        }
-        //columns
-        for (column in 1..dim2) {
-            val availableSlots = ArrayList<ArrayList<Int>>()
-            val lahtridInColumn = game column column
-            val olemasNumbrid = ArrayList<Int>()
-            for (j in 1..dim2) {
-                availableSlots.add(ArrayList())
-            }
-            for (j in 0 until dim2) {
-                val cell = lahtridInColumn[j]
-                val numbers: HashSet<*> = cell.numbers
-                if (numbers.size == 0 && cell.value == 0) {
-                    val globalCoords: GlobalCoords = cell.globalCoords
-                    throw FillingException("lahter at x: ${globalCoords.x}, y: ${globalCoords.y} is empty and without possibilities", game)
-                }
-            }
-            //get the frequency of possibilities of numbers 1-dim2
-            for (j in 0 until dim2) {
-                val lahter = lahtridInColumn[j]
-                for (a in lahter.numbers) {
-                    availableSlots[a - 1].add(j + 1)
-                }
-                olemasNumbrid.add(lahter.value)
-            }
-            //check the different numbers and the number of the possibilities
-            for (j in 0 until dim2) {
-                val arvud = availableSlots[j]
-                if (arvud.size > 0 && olemasNumbrid.contains(j + 1)) {
-                    throw FillingException("column " + column + " already has number " + (j + 1) + ", but possibilities exist", game)
-                }
-                if (arvud.size == 1) {
-                    val lahter = game.getCell(GlobalCoords(column, arvud[0]))
-                    lahter.value = j + 1
-                    afterNumber(lahter, game, true, " (column $column)", findNextOnes)
-                    return true
-                    //                    println("column",j+1);
-                } else if (arvud.size == 0 && !olemasNumbrid.contains(j + 1)) {
-                    throw FillingException("column " + column + " doesn't have number " + (j + 1) + " and no possibilities exist", game)
-                }
-            }
-        }
-        return false
-    }
-
-    @Throws(FillingException::class)
-    private fun filling1(game: Game): Boolean {
-        game.level = 1
-        for (box in game.boxes) {
-            for (cell in box.cells) {
-                val numbers = cell.numbers
-                if (numbers.size == 0 && cell.value == 0) {
-                    val globalCoords = cell.globalCoords
-                    throw FillingException("cell at x: " + globalCoords.x + ", y: " + globalCoords.y + " is empty and without possibilities", game)
-                } else if (numbers.size == 1) {
-                    cell.value = numbers.toTypedArray()[0]
-                    numbers.clear()
-                    afterNumber(cell, game, true, " (only choice)", findNextOnes)
-                    return true
-                }
-            }
-        }
-        return false
-    }
-
-    @Throws(FillingException::class)
-    private fun filling2(game: Game): Boolean {
-        var somethingDone = false
-        game.level = 2
-        //box
-        for (box in game.boxes) {
-            val availableSlots = ArrayList<ArrayList<Int>>()
-            val lahtridInBoxes: List<Cell> = box.cells
-            val olemasNumbrid = ArrayList<Int>()
-            for (j in 1..dim2) {
-                availableSlots.add(ArrayList())
-            }
-            for (j in 0 until dim2) {
-                val cell = lahtridInBoxes[j]
-                val numbers = cell.numbers
-                if (numbers.size == 0 && cell.value == 0) {
-                    val globalCoords = cell.globalCoords
-                    throw FillingException("lahter at x: ${globalCoords.x}, y: ${globalCoords.y} is empty and without possibilities", game)
-                }
-            }
-            //get the frequency of possibilities of numbers 1-dim2
-            for (j in 0 until dim2) {
-                val lahter = lahtridInBoxes[j]
-                for (a in lahter.numbers) {
-                    availableSlots[a - 1].add(j + 1)
-                }
-                olemasNumbrid.add(lahter.value)
-            }
-            //check the different numbers and the number of the possibilities
-            for (j in 0 until dim2) {
-                val arvud = availableSlots[j]
-                if (arvud.size > 0 && j + 1 in olemasNumbrid) {
-                    throw FillingException("box ${box.index} already has number ${j + 1}, but possibilities exist", game)
-                }
-                if (arvud.size in 2..dim) { //check number of rows
-                    val moduleRow = HashSet<Int>()
-                    for (arv in arvud) {
-                        moduleRow.add(arv.partition)
-                    }
-                    // candidate line (row) is active
-                    if (moduleRow.size == 1) {
-                        val moduleList = ArrayList(moduleRow)
-                        for (cell in game.row((box.locY - 1) * dim + moduleList[0])) {
-                            if (cell.box(game) != box) {
-                                if (cell.numbers.remove(j + 1)) {
-                                    somethingDone = true
-                                    //                                    println("vs3 row", (box.locY-1)*3+moduleList.get(0));
-                                }
-                            }
-                        }
-                        if (somethingDone) {
-                            game.addMessage("row ${(box.locY - 1) * dim + moduleList[0]}: ${j + 1}")
-                            return true
-                        }
-                    }
-                    //check number of columns
-                    val moduleColumn = HashSet<Int>()
-                    for (arv in arvud) {
-                        moduleColumn.add(arv.modulo)
-                    }
-                    // candidate line (column) is active
-                    if (moduleColumn.size == 1) {
-                        val moduleList = ArrayList(moduleColumn)
-                        for (cell in game.column((box.locX - 1) * dim + moduleList[0])) {
-                            if (cell.box(game) != box) {
-                                if (cell.numbers.remove(j + 1)) {
-                                    somethingDone = true
-                                    //                                    println("vs3 column", (box.locX-1)*3+moduleList.get(0));
-                                }
-                            }
-                        }
-                        if (somethingDone) {
-                            game.addMessage("column " + ((box.locX - 1) * dim + moduleList[0]) + ": " + (j + 1))
-                            return true
-                        }
-                    }
-                }
-            }
-        }
-        //rows
-        for (row in 1..dim2) {
-            val availableSlots = ArrayList<ArrayList<Int>>()
-            val lahtridInRow = game row row
-            val olemasNumbrid = ArrayList<Int>()
-            for (j in 1..dim2) {
-                availableSlots.add(ArrayList())
-            }
-            for (j in 0 until dim2) {
-                val cell = lahtridInRow[j]
-                val numbers: HashSet<*> = cell.numbers
-                if (numbers.size == 0 && cell.value == 0) {
-                    val globalCoords = cell.globalCoords
-                    throw FillingException("lahter at x: ${globalCoords.x}, y: ${globalCoords.y} is empty and without possibilities", game)
-                }
-            }
-            //get the frequency of possibilities of numbers 1-dim2
-            for (j in 0 until dim2) {
-                val lahter = lahtridInRow[j]
-                for (a in lahter.numbers) {
-                    availableSlots[a - 1].add(j + 1)
-                }
-                olemasNumbrid.add(lahter.value)
-            }
-            //check the different numbers and the number of the possibilities
-            for (j in 0 until dim2) {
-                val arvud = availableSlots[j]
-                if (arvud.size > 0 && olemasNumbrid.contains(j + 1)) {
-                    throw FillingException("row " + row + " already has number " + (j + 1) + ", but possibilities exist", game)
-                }
-                if (arvud.size >= 2 && arvud.size <= dim) {
-                    val module = HashSet<Int>()
-                    for (arv in arvud) {
-                        module.add(arv.partition)
-                    }
-                    // multiple lines is active, one number in a row resides in one box
-                    if (module.size == 1) {
-                        val moduleList = ArrayList(module)
-                        for (lahter in game.getBox(moduleList[0], row.partition).cells) {
-                            if (lahter.locY != row.modulo) {
-                                if (lahter.numbers.remove(j + 1)) {
-                                    somethingDone = true
-                                    //                                    println("vs4 row", j+1);
-                                }
-                            }
-                        }
-                        if (somethingDone) {
-                            game.addMessage("row " + row + ": " + (j + 1))
-                            return true
-                        }
-                    }
-                }
-            }
-        }
-        //columns
-        for (column in 1..dim2) {
-            val availableSlots = ArrayList<ArrayList<Int>>()
-            val lahtridInColumn = game column column
-            val olemasNumbrid = ArrayList<Int>()
-            for (j in 1..dim2) {
-                availableSlots.add(ArrayList())
-            }
-            for (j in 0 until dim2) {
-                val cell = lahtridInColumn[j]
-                val numbers: HashSet<*> = cell.numbers
-                if (numbers.size == 0 && cell.value == 0) {
-                    val globalCoords = cell.globalCoords
-                    throw FillingException("lahter at x: ${globalCoords.x}, y: ${globalCoords.y} is empty and without possibilities", game)
-                }
-            }
-            //get the frequency of possibilities of numbers 1-dim2
-            for (j in 0 until dim2) {
-                val lahter = lahtridInColumn[j]
-                for (a in lahter.numbers) {
-                    availableSlots[a - 1].add(j + 1)
-                }
-                olemasNumbrid.add(lahter.value)
-            }
-            //check the different numbers and the number of the possibilities
-            for (j in 0 until dim2) {
-                val arvud = availableSlots[j]
-                if (arvud.size > 0 && olemasNumbrid.contains(j + 1)) {
-                    throw FillingException("column " + column + " already has number " + (j + 1) + ", but possibilities exist", game)
-                }
-                if (arvud.size in 2..dim) {
-                    val module = HashSet<Int>()
-                    for (arv in arvud) {
-                        module.add(arv.partition)
-                    }
-                    //multiple lines is active
-                    if (module.size == 1) {
-                        val moduleList = ArrayList(module)
-                        for (lahter in game.getBox(column.partition, moduleList[0]).cells) {
-                            if (lahter.locX != column.modulo) {
-                                if (lahter.numbers.remove(j + 1)) {
-                                    somethingDone = true
-                                    //                                    println("vs4 column", j+1);
-                                }
-                            }
-                        }
-                        if (somethingDone) {
-                            game.addMessage("column $column: ${j + 1}")
-                            return true
-                        }
-                    }
-                }
-            }
-        }
-        return false
     }
 
     private fun filling3(game: Game): Boolean {
@@ -780,26 +451,32 @@ object Logic {
      * @param messageSuffix
      * @param findNextOnes look for boxes with only one choice remaining, ca 3x times faster for computer, less intuitive for people, but more intuitive, if trying to fill
      */
-    private fun afterNumber(cell: Cell, game: Game, showMessage: Boolean, messageSuffix: String?, findNextOnes: Boolean) {
+    internal fun afterNumber(cell: Cell, game: Game, showMessage: Boolean, messageSuffix: String?, findNextOnes: Boolean) {
         val (x, y) = cell.globalCoords
         if (showMessage) game.addMessage("x:$x y:$y value: ${cell.value}$messageSuffix")
-        (cell.box(game).cells + (game row y) + (game column x)).distinct().forEach {
-            it.numbers.remove(cell.value)
-            if (findNextOnes && it.value == 0 && it.numbers.size == 1) {
-                val onlyValue = it.numbers.first()
-                game.addMessage(" naked single $onlyValue)")
-                it.value = onlyValue
-                afterNumber(it, game, showMessage, null, findNextOnes)
+        (cell.box(game).cells + (game row y) + (game column x)).distinct().applyAll {
+            numbers.remove(cell.value)
+        }
+
+        if (findNextOnes) {
+            listOf(cell.box(game).cells, game row y, game column x).forEach {
+                val unfilled = it.filter { !it.filled }
+                if (unfilled.size <= 3) {
+                    unfilled.applyAll {
+                        if (value == 0 && numbers.size == 1) {
+                            val onlyValue = numbers.first()
+                            game.addMessage("x:$x y:$y value: ${cell.value}$messageSuffix naked single")
+                            value = onlyValue
+                            afterNumber(this, game, showMessage, null, findNextOnes)
+                        }
+                    }
+                }
             }
         }
     }
 
     private fun getCollectionName(a: Int): String {
         return if (a <= collectionNames.size + 1) collectionNames[a - 2] else "$a-uplet"
-    }
-
-    private fun copyList(`in`: ArrayList<Int>): ArrayList<Int> {
-        return ArrayList(`in`)
     }
 
     private fun printSidewaysGrid(game1: Game, game2: Game) {
