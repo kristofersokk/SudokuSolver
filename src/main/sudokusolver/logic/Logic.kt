@@ -33,6 +33,7 @@ object Logic {
     @Throws(FillingException::class, FinishedException::class)
     private fun continuousFilling(game: Game) {
         while (true) {
+            game.checkForErrors()
             //level 1
             if (hiddenSingle(game)) {
                 continue
@@ -78,6 +79,7 @@ object Logic {
 //            }
             printSidewaysGrid(unsolved, e.game)
             e.game.messages.forEach(::println)
+            println(e.game.toPrettyString(true))
         } catch (finishedException: FinishedException) {
             puzzles.add(unsolved)
             solutions.add(solvedGame)
@@ -479,36 +481,25 @@ object Logic {
         return if (a <= collectionNames.size + 1) collectionNames[a - 2] else "$a-uplet"
     }
 
-    private fun printSidewaysGrid(game1: Game, game2: Game) {
-        for (kastY in 1..dim) {
-            for (lahterY in 1..dim) {
-                for (kastX in 1..dim) {
-                    for (lahterX in 1..dim) {
-                        val value = game1.getCell(Coords(kastX, kastY), Coords(lahterX, lahterY)).value
-                        print(when {
-                            value == 0 -> " *"
-                            value > 9 -> value
-                            else -> " $value"
-                        })
+    private fun printSidewaysGrid(vararg games: Game) {
+        println(
+            (1..dim).joinToString("\n\n") { boxY ->
+                (1..dim).joinToString("\n") { cellY ->
+                    games.joinToString("        ") { game ->
+                        (1..dim).joinToString(" ", postfix = " ") { boxX ->
+                            (1..dim).joinToString("") { cellX ->
+                                val value = game.getCell(Coords(boxX, boxY), Coords(cellX, cellY)).value
+                                when {
+                                    value == 0 -> " *"
+                                    value > 9 -> value.toString()
+                                    else -> " $value"
+                                }
+                            }
+                        }
                     }
-                    print(" ")
                 }
-                print("        ")
-                for (kastX in 1..dim) {
-                    for (lahterX in 1..dim) {
-                        val value = game2.getCell(Coords(kastX, kastY), Coords(lahterX, lahterY)).value
-                        print(when {
-                            value == 0 -> " *"
-                            value > 9 -> value
-                            else -> " $value"
-                        })
-                    }
-                    print(" ")
-                }
-                println()
             }
-            println()
-        }
+        )
     }
 
     /**
@@ -544,14 +535,14 @@ object Logic {
 
     private fun combinations(sample: Int, maxLen: Int): ArrayList<ArrayList<Int>> {
 
-        fun _combsFindNext(last: ArrayList<Int>, lastInt: Int, results: ArrayList<ArrayList<Int>>, sample: Int, givenLevel: Int, maxLevel: Int): ArrayList<ArrayList<Int>> {
+        fun combsFindNext(last: ArrayList<Int>, lastInt: Int, results: ArrayList<ArrayList<Int>>, sample: Int, givenLevel: Int, maxLevel: Int): ArrayList<ArrayList<Int>> {
             var level = givenLevel
             level++
             if (level < maxLevel) {
                 for (i in lastInt + 1 until sample) {
-                    val send = copyList(last)
+                    val send = last.toMutableList()
                     send.add(i)
-                    _combsFindNext(send, i, results, sample, level, maxLevel)
+                    combsFindNext(send as ArrayList<Int>, i, results, sample, level, maxLevel)
                 }
             } else {
                 results.add(last)
@@ -560,7 +551,7 @@ object Logic {
         }
 
         val results = ArrayList<ArrayList<Int>>()
-        return _combsFindNext(ArrayList(), -1, results, sample, -1, maxLen)
+        return combsFindNext(ArrayList(), -1, results, sample, -1, maxLen)
     }
 
 }

@@ -1,6 +1,7 @@
 package sudokusolver
 
 import sudokusolver.Main.dim
+import sudokusolver.Main.dim2
 import sudokusolver.logic.Logic
 
 data class Cell(val locX: Int, val locY: Int, val box_locX: Int, val box_locY: Int, val givenValue: Int = 0, var numbers: HashSet<Int> = Logic.numberSet)
@@ -50,11 +51,14 @@ data class Cell(val locX: Int, val locY: Int, val box_locX: Int, val box_locY: I
 
 }
 
-fun Collection<Cell>.checkForErrors(game: Game) {
-    this.forEach { cell ->
-        if (cell.numbers.size == 0 && cell.value == 0) {
-            val globalCoords = cell.globalCoords
-            throw FillingException("cell at x: ${globalCoords.x}, y: ${globalCoords.y} is empty and without possibilities", game)
+@Throws(FillingException::class)
+fun Collection<Cell>.checkForErrors(game: Game, type: CellCollectionType, index: Int) {
+    val possibilities = possibilities()
+    possibilities.forEach { (number, possibleCells) ->
+        if (possibleCells.isEmpty() && number !in this) {
+            throw FillingException("${type.name} $index doesn't have number $number and no possibilities exist", game)
+        } else if (possibleCells.isNotEmpty() && number in this) {
+            throw FillingException("${type.name} $index already has number $number, but possibilities still exist", game)
         }
     }
 }
@@ -63,13 +67,15 @@ operator fun Collection<Cell>.contains(number: Int) =
     number in this.map { it.value }
 
 fun Collection<Cell>.possibilities() : Map<Int, List<Cell>> =
-    (1..Main.dim2).associateWith { number -> this.filter { number in it.numbers } }
+    (1..dim2).associateWith { number -> this.filter { number in it.numbers } }
 
 fun Collection<Cell>.possibleCellsFor(number: Int) : List<Cell> =
     this.filter { number in it.numbers }
 
-enum class CellCollectionType {
-    BOX,
-    ROW,
-    COLUMN;
+enum class CellCollectionType(lambda: (game: Game, index: Int) -> List<Cell>) {
+    BOX({ game: Game, index: Int -> game.box(index).cells }),
+    ROW({ game: Game, index: Int -> game row index }),
+    COLUMN({ game: Game, index: Int -> game column index });
+
+    val cells: (game: Game, index: Int) -> List<Cell> = lambda
 }

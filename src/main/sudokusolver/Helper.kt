@@ -2,7 +2,9 @@ package sudokusolver
 
 import sudokusolver.Main.dim
 
-inline operator fun <reified T> T.times(count: Int) : Array<T> = Array(count) {this}
+val workingDirectory = System.getProperty("user.dir")
+
+inline operator fun <reified T> T.times(count: Int): Array<T> = Array(count) { this }
 
 infix fun Array<String>.joinWith(separator: String): String = this.joinToString(separator = separator)
 
@@ -40,9 +42,29 @@ val Int.modulo: Int
 val Int.coords: Coords
     get() = Coords(modulo, partition)
 
-val Pair<Int, Int>.linear: Int
-    get() = (second - 1) * dim + first
+inline fun <T> Iterable<T>.applyAll(func: T.(index: Int) -> Unit) = forEachIndexed { index, t -> t.func(index) }
+inline fun <T> Iterable<T>.applyAllWithResult(func: T.() -> Result): List<Result> = map { it.func() }
 
-inline fun <T> Iterable<T>.applyAll(func: T.() -> Boolean) : List<Boolean> = map { it.func() }
+fun Iterable<Result>.allTrue() = all { it.result }
+fun Iterable<Result>.anyTrue() = any { it.result }
 
-fun Iterable<Boolean>.allTrue() = all { it }
+inline fun <T> Iterable<T>.applyEnsureSuccess(func: T.(index: Int) -> Result) {
+    var index = 0
+    forEach {
+        var success = false
+        while (!success) {
+            success = it.func(index).result
+            index++
+        }
+    }
+}
+
+class Result private constructor(val result: Boolean) {
+    companion object {
+        val SUCCESS = Result(true)
+        val FAILURE = Result(false)
+    }
+}
+
+val Boolean.result: Result
+    get() = if (this) Result.SUCCESS else Result.FAILURE

@@ -1,6 +1,5 @@
 package sudokusolver
 
-import sudokusolver.CellCollectionType.*
 import sudokusolver.Main.dim
 import sudokusolver.Main.dim2
 import sudokusolver.logic.Logic
@@ -37,17 +36,29 @@ data class Game(val boxes: List<Box> = generateBoxes(), val messages: ArrayList<
         return true
     }
 
+    @Throws(FillingException::class)
+    fun checkForErrors() {
+        allCells.forEach { cell ->
+            if (cell.numbers.size == 0 && cell.value == 0) {
+                val globalCoords = cell.globalCoords
+                throw FillingException("cell at x: ${globalCoords.x}, y: ${globalCoords.y} is empty and without possibilities", this)
+            }
+        }
+    }
+
     infix fun row(y: Int): List<Cell> = allCells.filter { it.globalCoords.y == y }
 
     infix fun column(x: Int): List<Cell> = allCells.filter { it.globalCoords.x == x }
 
+    fun allRows(): Collection<List<Cell>> = allCells.groupBy { it.globalCoords.y }.values
+
+    fun allColumns(): Collection<List<Cell>> = allCells.groupBy { it.globalCoords.x }.values
+
     companion object {
 
-        val funcsGetCells: Array<Pair<(game: Game, index: Int) -> List<Cell>, CellCollectionType>> = arrayOf(
-            {game: Game, index: Int -> game.box(index).cells} to BOX,
-            {game: Game, index: Int -> game row index} to ROW,
-            {game: Game, index: Int -> game column index} to COLUMN
-        )
+        val funcsGetCells: List<Pair<(game: Game, index: Int) -> List<Cell>, CellCollectionType>> = CellCollectionType.values().map { it.cells to it }
+
+        fun funcsGetCells(vararg types: CellCollectionType) = types.map { it.cells to it }
 
         fun generateBoxes(): List<Box> {
             return (1..dim2).map { Box(it) }.toList()
@@ -66,11 +77,12 @@ data class Game(val boxes: List<Box> = generateBoxes(), val messages: ArrayList<
         }
 
         fun solveMultipleFromFile(level: Int, start: Int, stop: Int): List<Game> {
-            val file = File("../src/main/sudokusolver/level$level-10000.txt")
+            val file = File("${workingDirectory}/level$level-10000.txt")
             val lines = file.readLines()
-            return (stop..start).map {
+            println(lines)
+            return (start..stop).map {
                 val game = Game()
-                game.importFromString(lines[it])
+                game.importFromString(lines[it - 1])
                 game.solve()
             }
         }

@@ -1,6 +1,7 @@
 package sudokusolver.logic
 
 import sudokusolver.*
+import sudokusolver.CellCollectionType.*
 import sudokusolver.Main.dim2
 import sudokusolver.Main.findNextOnes
 
@@ -24,29 +25,43 @@ internal fun hiddenSingle(game: Game): Boolean {
     var somethingDone = false
     game.level = 1
 
+    game.boxes.map { it.cells }.applyAll { i ->
+        val index = i + 1
+        (1..dim2).forEach { number ->
+            checkForErrors(game, BOX, index)
+            //get the cells where a number could go
+            val possibleCells = possibleCellsFor(number)
+            //check the number of possibilities
+            if (possibleCells.size == 1) {
+                val cell = possibleCells.first()
+                cell.value = number
+                Logic.afterNumber(cell, game, true, " (box $index)", findNextOnes)
+                somethingDone = true
+            }
+        }
+    }
+
+    if (somethingDone) {
+        return true
+    }
+
     (1..dim2).forEach { number ->
-        Game.funcsGetCells.forEach { (func, type) ->
-            var index = 1
-            while (index <= dim2) {
-                somethingDone = false
-                val cells = func(game, index)
-                cells.checkForErrors(game)
+        Game.funcsGetCells(ROW, COLUMN).forEach { (func, type) ->
+            somethingDone = false
+            (1..dim2).map { func(game, it) }.applyEnsureSuccess { i ->
+                val index = i + 1
+                checkForErrors(game, type, index)
                 //get the cells where a number could go
-                val possibleCells = cells.possibleCellsFor(number)
+                val possibleCells = possibleCellsFor(number)
                 //check the number of possibilities
-                if (possibleCells.isNotEmpty() && number in cells) {
-                    throw FillingException("box $index already has number $number, but possibilities exist", game)
-                }
                 if (possibleCells.size == 1) {
                     val cell = possibleCells.first()
                     cell.value = number
                     Logic.afterNumber(cell, game, true, " (${type.name} $index)", findNextOnes)
                     somethingDone = true
-                } else if (possibleCells.isEmpty() && number !in cells) {
-                    throw FillingException("${type.name} $index doesn't have number $number and no possibilities exist", game)
-                }
-                if (!somethingDone) {
-                    index++
+                    Result.FAILURE
+                } else {
+                    Result.SUCCESS
                 }
             }
             if (somethingDone) {
