@@ -6,7 +6,7 @@ import sudokusolver.CellCollectionType.*
 import sudokusolver.logic.Logic.getCollectionName
 
 fun nakedHiddenCombinations(game: Game): Boolean {
-    var somethingDone = false
+    val somethingDone = false
     //naked and hidden pairs, triplets, quarters
     game.level = 3
 

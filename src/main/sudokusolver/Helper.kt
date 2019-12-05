@@ -2,7 +2,7 @@ package sudokusolver
 
 import sudokusolver.Main.dim
 
-val workingDirectory = System.getProperty("user.dir")
+val workingDirectory: String = System.getProperty("user.dir")
 
 inline operator fun <reified T> T.times(count: Int): Array<T> = Array(count) { this }
 

@@ -12,7 +12,6 @@ data class Cell(val locX: Int, val locY: Int, val box_locX: Int, val box_locY: I
  * @param locY 1-dim
  * @param numbers [1-dim2] or [0],
  * 1st row from left to right, 2. -||-, 3. -||-, ...
- * @param value null or value
  */
 {
 
@@ -37,14 +36,11 @@ data class Cell(val locX: Int, val locY: Int, val box_locX: Int, val box_locY: I
 
     operator fun contains(number: Int) = number in numbers
 
-    fun toPrettyString(): String {
-        val second = (1..dim).joinToString("\n") { y ->
-            (1..dim).joinToString("") { x ->
-                val arv = (y - 1) * dim + x
-                if (arv in numbers) arv.toString() else " "
-            }
+    fun toPrettyString(): String = (1..dim).joinToString("\n") { y ->
+        (1..dim).joinToString("") { x ->
+            val arv = (y - 1) * dim + x
+            if (arv in numbers) arv.toString() else " "
         }
-        return second
     }
 
     fun deepCopy(): Cell = copy(numbers = numbers.toHashSet(), givenValue = value)

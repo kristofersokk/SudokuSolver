@@ -4,14 +4,6 @@ import sudokusolver.Main.dim
 import sudokusolver.Main.dim2
 
 data class Box(val index: Int, val cells: List<Cell> = (1..dim2).map { Cell(it.modulo, it.partition, index.modulo, index.partition) })
-/**
- *
- * @param locX 1-dim
- * @param locY 1-3
- * @param cells [Cell, Cell...]
- * 1st row from left to right, 2. -||-, 3. -||-, ...
- * @param dim the dimensions of box
- */
 {
     val coords: Coords
         get() = Coords(index.modulo, index.partition)
@@ -24,7 +16,7 @@ data class Box(val index: Int, val cells: List<Cell> = (1..dim2).map { Cell(it.m
 
     fun getCell(coords: Coords): Cell = getCell(coords.linear)
 
-    fun getCell(index: Int): Cell = cells[index - 1]
+    private fun getCell(index: Int): Cell = cells[index - 1]
 
     operator fun get(index: Int) = getCell(index)
 

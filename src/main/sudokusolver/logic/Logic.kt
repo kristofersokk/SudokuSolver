@@ -87,9 +87,6 @@ object Logic {
             if (finishedException.filled) {
                 solutionsAmount++
                 solvedGame.isSolved = true
-            } else {
-//                printSidewaysGrid(unsolved, solvedGame)
-//                println(solvedGame.toPrettyString(true))
             }
         }
         return solvedGame

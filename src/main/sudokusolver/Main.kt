@@ -20,7 +20,7 @@ object Main {
             "__e__3____f__5__" +
             "__f1a4____59c2__"
     const val testString = ".6....3.......2.6..8..1.5.9.....4.8...3...7...2.6.....1.5.9..2..4.8.......7....1."
-    const val testString2 = "..16.4......8932...3......678.....63.2..6..8.19.....244......5...8437......2.61.."
+    private const val testString2 = "..16.4......8932...3......678.....63.2..6..8.19.....244......5...8437......2.61.."
     const val fileLocation = "C:/Users/krist/Google Drive/Proge/SudokuSolver/SudokuSolver/src/sudokusolver/"
     //settings
     const val dim = 3

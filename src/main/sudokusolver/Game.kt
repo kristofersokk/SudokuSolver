@@ -50,11 +50,11 @@ data class Game(val boxes: List<Box> = generateBoxes(), val messages: ArrayList<
 
     infix fun column(x: Int): List<Cell> = allCells.filter { it.globalCoords.x == x }
 
-    fun allRows(): Collection<List<Cell>> = allCells.groupBy { it.globalCoords.y }.values
+    private fun allRows(): Collection<List<Cell>> = allCells.groupBy { it.globalCoords.y }.values
 
-    fun allColumns(): Collection<List<Cell>> = allCells.groupBy { it.globalCoords.x }.values
+    private fun allColumns(): Collection<List<Cell>> = allCells.groupBy { it.globalCoords.x }.values
 
-    fun allBoxes(): Collection<List<Cell>> = boxes.map { it.cells }
+    private fun allBoxes(): Collection<List<Cell>> = boxes.map { it.cells }
 
     fun allCellCollectionsByType(type: CellCollectionType): Collection<List<Cell>> =
         when (type) {
@@ -157,18 +157,16 @@ data class Game(val boxes: List<Box> = generateBoxes(), val messages: ArrayList<
 
     fun box(locX: Int, locY: Int): Box = boxes[Coords(locX, locY).linear - 1]
 
-    infix fun box(coords: Coords): Box = boxes[coords.linear - 1]
+    private infix fun box(coords: Coords): Box = boxes[coords.linear - 1]
 
     infix fun box(index: Int): Box = boxes[index - 1]
 
-    fun getCell(bLoc: Coords, cLoc: Coords): Cell = box(bLoc).getCell(cLoc)
+    private fun getCell(bLoc: Coords, cLoc: Coords): Cell = box(bLoc).getCell(cLoc)
 
     /**
-     * @param x 1-9
-     * @param y 1-9
      * @return lahter
      */
-    fun getCell(globalCoords: GlobalCoords): Cell {
+    private fun getCell(globalCoords: GlobalCoords): Cell {
         val (boxCoords, cellCoords) = globalCoords.toBoxAndCellCoords()
         return getCell(boxCoords, cellCoords)
     }
