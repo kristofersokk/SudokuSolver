@@ -50,7 +50,10 @@ object Main {
 //        }
 //        println(game.toPrettyString(true))
 //        println(game.toPrettyString(false))
-        val games = Game.solveMultipleFromFile(1, 1, 10000)
+//        val games = Game.solveMultipleFromFile(1, 1, 10000)
+        val game = Game.solveSudokuString(testString2)
+        println(game.nonBorderedString)
+        println(game.messages.joinToString("\n"))
         //        Game.solveMultipleFromFile(1, 1, 10000);
 //        Game.solveMultipleFromFile(2, 1, 10000);
 //        Game.solveMultipleFromFile(3, 1, 10000);

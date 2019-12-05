@@ -1,7 +1,6 @@
 package sudokusolver.logic
 
 import sudokusolver.*
-import sudokusolver.Main.dim
 import sudokusolver.Main.dim2
 import java.awt.BorderLayout
 import java.awt.Dimension
@@ -9,7 +8,6 @@ import javax.swing.JFrame
 import javax.swing.JLabel
 import javax.swing.SwingConstants
 import javax.swing.WindowConstants
-import kotlin.math.ceil
 
 object Logic {
 
@@ -52,7 +50,7 @@ object Logic {
             }
 
             //Level 3
-            if (filling3(game)) {
+            if (nakedHiddenCombinations(game)) {
                 continue
             }
             throw FinishedException(game, false)
@@ -77,7 +75,7 @@ object Logic {
 //            } catch (InterruptedException e1) {
 //                e1.printStackTrace();
 //            }
-            printSidewaysGrid(unsolved, e.game)
+            println(listOf(unsolved, e.game).toSideWaysSimpleString())
             e.game.messages.forEach(::println)
             println(e.game.toPrettyString(true))
         } catch (finishedException: FinishedException) {
@@ -89,6 +87,9 @@ object Logic {
             if (finishedException.filled) {
                 solutionsAmount++
                 solvedGame.isSolved = true
+            } else {
+//                printSidewaysGrid(unsolved, solvedGame)
+//                println(solvedGame.toPrettyString(true))
             }
         }
         return solvedGame
@@ -100,350 +101,6 @@ object Logic {
                 afterNumber(cell, game, false, null, false)
             }
         }
-    }
-
-    private fun filling3(game: Game): Boolean {
-        var somethingDone = false
-        //naked and hidden pairs, triplets, quarters
-        game.level = 3
-        //box
-        for (box in game.boxes) {
-            val lahtridInBoxes: List<Cell> = box.cells
-            val emptyLahtrid = ArrayList<Cell>()
-            for (lahter in lahtridInBoxes) {
-                if (lahter.value == 0) {
-                    emptyLahtrid.add(lahter)
-                }
-            }
-            if (emptyLahtrid.size > 3) { //naked
-                run {
-                    var i = 2
-                    while (i <= ceil(emptyLahtrid.size / 2f.toDouble())) {
-                        combinations@ for (a in combinations(emptyLahtrid.size, i)) { //you've got the combinations, what now?
-                            val chosenOnes = ArrayList<Cell>()
-                            for (index in a) {
-                                chosenOnes.add(emptyLahtrid[index])
-                            }
-                            //finding naked pairs, triplets, ...
-                            val numbers = HashSet<Int>()
-                            for (cell in chosenOnes) {
-                                for (index in cell.numbers) {
-                                    numbers.add(index)
-                                    if (numbers.size > i) { //not a hidden pair
-                                        continue@combinations
-                                    }
-                                }
-                            }
-                            //remove the numbers from the other lahtrid in the same box
-                            lahtrid@ for (cell in emptyLahtrid) {
-                                for (lahter1 in chosenOnes) {
-                                    if (cell == lahter1) {
-                                        continue@lahtrid
-                                    }
-                                }
-                                for (usedNumber in numbers) {
-                                    if (cell.numbers.remove(usedNumber)) {
-                                        somethingDone = true
-                                    }
-                                }
-                            }
-                            //TODO check if in a row or a column
-                            if (somethingDone) {
-                                game.addMessage("box ${box.index}: naked ${getCollectionName(i)} with numbers $numbers")
-                                return true
-                            }
-                        }
-                        i++
-                    }
-                }
-                //hidden
-//get unfilled numbers
-                val unfillednumbers = numberSet
-                for (lahter in box.cells) {
-                    unfillednumbers.remove(lahter.value)
-                }
-                val numberscontainedinlahters: ArrayList<ArrayList<Int>?> = ArrayList()
-                for (i in 0 until dim2) {
-                    numberscontainedinlahters.add(ArrayList())
-                }
-                for (index in emptyLahtrid.indices) {
-                    val lahter = emptyLahtrid[index]
-                    if (lahter.value == 0) {
-                        for (numbrid in lahter.numbers) {
-                            numberscontainedinlahters[numbrid - 1]!!.add(index)
-                        }
-                    }
-                }
-                val numberlist = numberList
-                //removes unneeded empty lists (of those numbers that are already filled)
-                var b = 0
-                while (b < numberscontainedinlahters.size) {
-                    if (numberscontainedinlahters[b]!!.isEmpty()) {
-                        numberscontainedinlahters.removeAt(b)
-                        numberlist.remove(b)
-                    } else {
-                        b++
-                    }
-                }
-                //taking combinations of fillable numbers and analyzing if total lahters needed by them is more than the amount of numbers being analyzed
-                var i = 2
-                while (i < Math.ceil(emptyLahtrid.size / 2f.toDouble())) {
-                    for (a in combinations(unfillednumbers.size, i)) { //you've got the combinations, what now?
-                        val chosenOnesIndexes = ArrayList(a)
-                        //collecting lahters needed
-                        val chosenLahtersIndexes = HashSet<Int>()
-                        for (query in chosenOnesIndexes) chosenLahtersIndexes.addAll(numberscontainedinlahters[query]!!)
-                        //not a hidden pair, triplet,...
-                        if (chosenLahtersIndexes.size > chosenOnesIndexes.size) continue
-                        val chosenLahtrid = ArrayList<Cell>()
-                        for (index in chosenLahtersIndexes) chosenLahtrid.add(emptyLahtrid[index])
-                        val chosenOnes: HashSet<Int> = HashSet()
-                        for (arv in chosenOnesIndexes) chosenOnes.add(numberlist[arv])
-                        //remove other numbers from chosen lahters
-                        for (lahter in chosenLahtrid) {
-                            for (arv in numberlist) if (!chosenOnes.contains(arv)) if (lahter.numbers.remove(arv)) somethingDone = true
-                        }
-                        //TODO add check if inside a row or a column
-//remove the numbers from the other lahtrid in the same row
-                        lahtrid@ for (lahter in emptyLahtrid) {
-                            for (lahter1 in chosenLahtrid) {
-                                if (lahter == lahter1) continue@lahtrid
-                            }
-                            for (usedNumber in chosenOnes) if (lahter.numbers.remove(usedNumber)) somethingDone = true
-                        }
-                        if (somethingDone) {
-                            game.addMessage("box ${box.index}: hidden ${getCollectionName(i)} with numbers $chosenOnes")
-                            return true
-                        }
-                    }
-                    i++
-                }
-            }
-        }
-        //TODO add puzzle level to the game, after that use filtering to filter out more complex
-//rows
-        for (rowIndex in 1..dim2) {
-            val lahtridInRow = game row rowIndex
-            val emptyLahtrid = ArrayList<Cell>()
-            for (lahter in lahtridInRow) {
-                if (lahter.value == 0) {
-                    emptyLahtrid.add(lahter)
-                }
-            }
-            if (emptyLahtrid.size > 3) { //naked
-                run {
-                    var i = 2
-                    while (i <= Math.ceil(emptyLahtrid.size / 2f.toDouble())) {
-                        combinations@ for (a in combinations(emptyLahtrid.size, i)) { //you've got the combinations, what now?
-                            val chosenOnes = ArrayList<Cell>()
-                            for (index in a) {
-                                chosenOnes.add(emptyLahtrid[index])
-                            }
-                            //finding naked pairs, triplets, ...
-                            val numbers = HashSet<Int>()
-                            for (lahter in chosenOnes) {
-                                for (index in lahter.numbers) {
-                                    numbers.add(index)
-                                    if (numbers.size > i) { //not a hidden pair
-                                        continue@combinations
-                                    }
-                                }
-                            }
-                            //remove the numbers from the other lahtrid in the same rowIndex
-                            lahtrid@ for (lahter in emptyLahtrid) {
-                                for (lahter1 in chosenOnes) {
-                                    if (lahter == lahter1) {
-                                        continue@lahtrid
-                                    }
-                                }
-                                for (usedNumber in numbers) {
-                                    if (lahter.numbers.remove(usedNumber)) {
-                                        somethingDone = true
-                                    }
-                                }
-                            }
-                            if (somethingDone) {
-                                game.addMessage("rowIndex " + rowIndex + ": naked " + getCollectionName(i) + " with numbers " + numbers.toString())
-                                return true
-                            }
-                        }
-                        i++
-                    }
-                }
-                //hidden
-//get unfilled numbers
-                val unfillednumbers = numberSet
-                for (lahter in game row rowIndex) {
-                    unfillednumbers.remove(lahter.value)
-                }
-                val numberscontainedinlahters: ArrayList<ArrayList<Int>> = ArrayList()
-                for (i in 0 until dim2) {
-                    numberscontainedinlahters.add(ArrayList())
-                }
-                for (index in emptyLahtrid.indices) {
-                    val lahter = emptyLahtrid[index]
-                    if (lahter.value == 0) {
-                        for (numbrid in lahter.numbers) {
-                            numberscontainedinlahters[numbrid - 1].add(index)
-                        }
-                    }
-                }
-                val numberlist = numberList
-                //removes unneeded empty lists (of those numbers that are already filled)
-                var b = 0
-                while (b < numberscontainedinlahters.size) {
-                    if (numberscontainedinlahters[b].isEmpty()) {
-                        numberscontainedinlahters.removeAt(b)
-                        numberlist.removeAt(b)
-                    } else {
-                        b++
-                    }
-                }
-                //taking combinations of fillable numbers and analyzing if total lahters needed by them is more than the amount of numbers being analyzed
-                var i = 2
-                while (i < Math.ceil(emptyLahtrid.size / 2f.toDouble())) {
-                    for (a in combinations(unfillednumbers.size, i)) { //you've got the combinations, what now?
-                        val chosenOnesIndexes = ArrayList(a as ArrayList<Int>)
-                        //collecting lahters needed
-                        val chosenLahtersIndexes = HashSet<Int>()
-                        for (query in chosenOnesIndexes) chosenLahtersIndexes.addAll(numberscontainedinlahters[query]!!)
-                        //not a hidden pair, triplet,...
-                        if (chosenLahtersIndexes.size > chosenOnesIndexes.size) continue
-                        val chosenLahtrid = ArrayList<Cell>()
-                        for (index in chosenLahtersIndexes) chosenLahtrid.add(emptyLahtrid[index])
-                        val chosenOnes = HashSet<Int>()
-                        for (arv in chosenOnesIndexes) chosenOnes.add(numberlist[arv])
-                        //remove other numbers from chosen lahters
-                        for (lahter in chosenLahtrid) {
-                            for (arv in numberlist) if (!chosenOnes.contains(arv)) if (lahter.numbers.remove(arv)) somethingDone = true
-                        }
-                        //remove the numbers from the other lahtrid in the same rowIndex
-                        lahtrid@ for (lahter in emptyLahtrid) {
-                            for (lahter1 in chosenLahtrid) {
-                                if (lahter == lahter1) continue@lahtrid
-                            }
-                            for (usedNumber in chosenOnes) if (lahter.numbers.remove(usedNumber)) somethingDone = true
-                        }
-                        //TODO check if inside a box
-                        if (somethingDone) {
-                            game.addMessage("rowIndex " + rowIndex.toString() + ": hidden " + getCollectionName(i) + " with numbers " + chosenOnes.toString())
-                            return true
-                        }
-                    }
-                    i++
-                }
-            }
-        }
-        //columns
-        for (column in 1..dim2) {
-            val lahtridInColumn = game column column
-            val emptyLahtrid = ArrayList<Cell>()
-            for (lahter in lahtridInColumn) {
-                if (lahter.value == 0) {
-                    emptyLahtrid.add(lahter)
-                }
-            }
-            if (emptyLahtrid.size > 3) { //naked
-                run {
-                    var i = 2
-                    while (i <= Math.ceil(emptyLahtrid.size / 2f.toDouble())) {
-                        combinations@ for (a in combinations(emptyLahtrid.size, i)) { //you've got the combinations, what now?
-                            val chosenOnes = ArrayList<Cell>()
-                            for (index in a) {
-                                chosenOnes.add(emptyLahtrid[index])
-                            }
-                            //finding naked pairs, triplets, ...
-                            val numbers = HashSet<Int>()
-                            for (cell in chosenOnes) {
-                                for (index in cell.numbers) {
-                                    numbers.add(index)
-                                    if (numbers.size > i) { //not a hidden pair
-                                        continue@combinations
-                                    }
-                                }
-                            }
-                            //remove the numbers from the other lahtrid in the same row
-                            lahtrid@ for (cell in emptyLahtrid) {
-                                for (lahter1 in chosenOnes) {
-                                    if (cell == lahter1) {
-                                        continue@lahtrid
-                                    }
-                                }
-                                for (usedNumber in numbers) {
-                                    if (cell.numbers.remove(usedNumber)) {
-                                        somethingDone = true
-                                    }
-                                }
-                            }
-                            if (somethingDone) {
-                                game.addMessage("column " + column + ": naked " + getCollectionName(i) + " with numbers " + numbers.toString())
-                                return true
-                            }
-                        }
-                        i++
-                    }
-                }
-                //hidden
-//get unfilled numbers
-                val unfillednumbers = numberSet
-                for (lahter in game column column) {
-                    unfillednumbers.remove(lahter.value)
-                }
-                val numberscontainedinlahters: ArrayList<ArrayList<Int>> = ArrayList()
-                for (i in 0 until dim2) {
-                    numberscontainedinlahters.add(ArrayList())
-                }
-                for (index in emptyLahtrid.indices) {
-                    val lahter = emptyLahtrid[index]
-                    if (lahter.value == 0) {
-                        for (numbrid in lahter.numbers) {
-                            numberscontainedinlahters[numbrid - 1].add(index)
-                        }
-                    }
-                }
-                val numberlist = numberList
-                //removes unneeded empty lists (of those numbers that are already filled)
-                var b = 0
-                while (b < numberscontainedinlahters.size) {
-                    if (numberscontainedinlahters[b].isEmpty()) {
-                        numberscontainedinlahters.removeAt(b)
-                        numberlist.removeAt(b)
-                    } else {
-                        b++
-                    }
-                }
-                //taking combinations of fillable numbers and analyzing if total lahters needed by them is more than the amount of numbers being analyzed
-                var i = 2
-                while (i < Math.ceil(emptyLahtrid.size / 2f.toDouble())) {
-                    for (a in combinations(unfillednumbers.size, i)) { //you've got the combinations, what now?
-                        val chosenOnesIndexes = ArrayList(a)
-                        //collecting lahters needed
-                        val chosenLahtersIndexes = HashSet<Int>()
-                        for (query in chosenOnesIndexes) chosenLahtersIndexes.addAll(numberscontainedinlahters[query]!!)
-                        //not a hidden pair, triplet,...
-                        if (chosenLahtersIndexes.size > chosenOnesIndexes.size) continue
-                        val chosenLahtrid = ArrayList<Cell>()
-                        for (index in chosenLahtersIndexes) chosenLahtrid.add(emptyLahtrid[index])
-                        val chosenOnes: HashSet<Int> = HashSet()
-                        for (arv in chosenOnesIndexes) chosenOnes.add(numberlist[arv])
-                        //remove other numbers from chosen lahters
-                        for (lahter in chosenLahtrid) for (arv in numberSet) if (!chosenOnes.contains(arv)) if (lahter.numbers.remove(arv)) somethingDone = true
-                        //remove the numbers from the other lahtrid in the same row
-                        lahtrid@ for (lahter in emptyLahtrid) {
-                            for (lahter1 in chosenLahtrid) if (lahter == lahter1) continue@lahtrid
-                            for (usedNumber in chosenOnes) if (lahter.numbers.remove(usedNumber)) somethingDone = true
-                        }
-                        //TODO check if inside a box
-                        if (somethingDone) {
-                            game.addMessage("column " + column.toString() + ": hidden " + getCollectionName(i) + " with numbers " + chosenOnes.toString())
-                            return true
-                        }
-                    }
-                    i++
-                }
-            }
-        }
-        return somethingDone
     }
 
     /**
@@ -477,29 +134,8 @@ object Logic {
         }
     }
 
-    private fun getCollectionName(a: Int): String {
+    fun getCollectionName(a: Int): String {
         return if (a <= collectionNames.size + 1) collectionNames[a - 2] else "$a-uplet"
-    }
-
-    private fun printSidewaysGrid(vararg games: Game) {
-        println(
-            (1..dim).joinToString("\n\n") { boxY ->
-                (1..dim).joinToString("\n") { cellY ->
-                    games.joinToString("        ") { game ->
-                        (1..dim).joinToString(" ", postfix = " ") { boxX ->
-                            (1..dim).joinToString("") { cellX ->
-                                val value = game.getCell(Coords(boxX, boxY), Coords(cellX, cellY)).value
-                                when {
-                                    value == 0 -> " *"
-                                    value > 9 -> value.toString()
-                                    else -> " $value"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        )
     }
 
     /**
@@ -520,7 +156,7 @@ object Logic {
                     }
                 }
                 println()
-                printSidewaysGrid(puzzles[i], solutions[i])
+                println(listOf(puzzles[i], solutions[i]).toSideWaysSimpleString())
                 println()
                 println("----------------------------------------------------------------")
             }
@@ -532,26 +168,5 @@ object Logic {
 
     val numberList: MutableList<Int>
         get() = (1..dim2).toMutableList()
-
-    private fun combinations(sample: Int, maxLen: Int): ArrayList<ArrayList<Int>> {
-
-        fun combsFindNext(last: ArrayList<Int>, lastInt: Int, results: ArrayList<ArrayList<Int>>, sample: Int, givenLevel: Int, maxLevel: Int): ArrayList<ArrayList<Int>> {
-            var level = givenLevel
-            level++
-            if (level < maxLevel) {
-                for (i in lastInt + 1 until sample) {
-                    val send = last.toMutableList()
-                    send.add(i)
-                    combsFindNext(send as ArrayList<Int>, i, results, sample, level, maxLevel)
-                }
-            } else {
-                results.add(last)
-            }
-            return results
-        }
-
-        val results = ArrayList<ArrayList<Int>>()
-        return combsFindNext(ArrayList(), -1, results, sample, -1, maxLen)
-    }
 
 }

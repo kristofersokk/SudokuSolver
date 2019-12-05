@@ -48,6 +48,9 @@ inline fun <T> Iterable<T>.applyAllWithResult(func: T.() -> Result): List<Result
 fun Iterable<Result>.allTrue() = all { it.result }
 fun Iterable<Result>.anyTrue() = any { it.result }
 
+val Iterable<Cell>.allPossibleNumbers: Set<Int>
+    get() = flatMap { it.numbers }.toSet()
+
 inline fun <T> Iterable<T>.applyEnsureSuccess(func: T.(index: Int) -> Result) {
     var index = 0
     forEach {
@@ -68,3 +71,10 @@ class Result private constructor(val result: Boolean) {
 
 val Boolean.result: Result
     get() = if (this) Result.SUCCESS else Result.FAILURE
+
+fun Iterable<Game>.toSideWaysSimpleString() : String {
+    val gamesRows = map { it.nonBorderedString.split("\n") }
+    return (1 until Main.dim2 + dim).joinToString("\n") { rowY ->
+        gamesRows.joinToString("        ") { it[rowY] }
+    }
+}

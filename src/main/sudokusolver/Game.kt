@@ -54,6 +54,15 @@ data class Game(val boxes: List<Box> = generateBoxes(), val messages: ArrayList<
 
     fun allColumns(): Collection<List<Cell>> = allCells.groupBy { it.globalCoords.x }.values
 
+    fun allBoxes(): Collection<List<Cell>> = boxes.map { it.cells }
+
+    fun allCellCollectionsByType(type: CellCollectionType): Collection<List<Cell>> =
+        when (type) {
+            CellCollectionType.ROW -> allRows()
+            CellCollectionType.COLUMN -> allColumns()
+            CellCollectionType.BOX -> allBoxes()
+        }
+
     companion object {
 
         val funcsGetCells: List<Pair<(game: Game, index: Int) -> List<Cell>, CellCollectionType>> = CellCollectionType.values().map { it.cells to it }
@@ -99,6 +108,22 @@ data class Game(val boxes: List<Box> = generateBoxes(), val messages: ArrayList<
         }
     }
 
+    val nonBorderedString: String
+        get() = (1..dim).joinToString("\n\n") { boxY ->
+            (1..dim).joinToString("\n") { cellY ->
+                (1..dim).joinToString(" ", postfix = " ") { boxX ->
+                    (1..dim).joinToString("") { cellX ->
+                        val value = getCell(Coords(boxX, boxY), Coords(cellX, cellY)).value
+                        when {
+                            value == 0 -> " *"
+                            value > 9 -> value.toString()
+                            else -> " $value"
+                        }
+                    }
+                }
+            }
+        }
+
     /**
      *
      * @param level level 1-6
@@ -136,7 +161,7 @@ data class Game(val boxes: List<Box> = generateBoxes(), val messages: ArrayList<
 
     infix fun box(index: Int): Box = boxes[index - 1]
 
-    fun getCell(bLoc: Coords, cLoc: Coords) : Cell = box(bLoc).getCell(cLoc)
+    fun getCell(bLoc: Coords, cLoc: Coords): Cell = box(bLoc).getCell(cLoc)
 
     /**
      * @param x 1-9

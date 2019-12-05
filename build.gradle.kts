@@ -13,6 +13,7 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.13.0")
+    implementation("com.marcinmoskala:DiscreteMathToolkit:1.0.3")
 }
 
 sourceSets {
