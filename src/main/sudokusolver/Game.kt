@@ -1,7 +1,5 @@
 package sudokusolver
 
-import sudokusolver.Main.dim
-import sudokusolver.Main.dim2
 import sudokusolver.logic.Logic
 import java.io.File
 
@@ -130,7 +128,7 @@ data class Game(val boxes: List<Box> = generateBoxes(), val messages: ArrayList<
      * @param index index 1-10000
      */
     private fun importFromFile(level: Int, index: Int) {
-        val file = File(Main.fileLocation + "level" + level + "-10000.txt")
+        val file = File(fileLocation + "level" + level + "-10000.txt")
         importFromString(file.readLines()[index])
     }
 

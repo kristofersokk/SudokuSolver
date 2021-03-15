@@ -1,8 +1,5 @@
 package sudokusolver
 
-import sudokusolver.Main.dim
-import sudokusolver.Main.dim2
-
 data class Box(val index: Int, val cells: List<Cell> = (1..dim2).map { Cell(it.modulo, it.partition, index.modulo, index.partition) })
 {
     val coords: Coords

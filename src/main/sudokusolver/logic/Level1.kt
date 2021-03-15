@@ -2,8 +2,6 @@ package sudokusolver.logic
 
 import sudokusolver.*
 import sudokusolver.CellCollectionType.*
-import sudokusolver.Main.dim2
-import sudokusolver.Main.findNextOnes
 
 @Throws(FillingException::class)
 internal fun nakedSingle(game: Game): Boolean {

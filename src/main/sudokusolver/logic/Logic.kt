@@ -1,7 +1,6 @@
 package sudokusolver.logic
 
 import sudokusolver.*
-import sudokusolver.Main.dim2
 import java.awt.BorderLayout
 import java.awt.Dimension
 import javax.swing.JFrame

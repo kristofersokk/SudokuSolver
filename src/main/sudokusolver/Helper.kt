@@ -1,7 +1,5 @@
 package sudokusolver
 
-import sudokusolver.Main.dim
-
 val workingDirectory: String = System.getProperty("user.dir")
 
 inline operator fun <reified T> T.times(count: Int): Array<T> = Array(count) { this }
@@ -74,7 +72,7 @@ val Boolean.result: Result
 
 fun Iterable<Game>.toSideWaysSimpleString() : String {
     val gamesRows = map { it.nonBorderedString.split("\n") }
-    return (1 until Main.dim2 + dim).joinToString("\n") { rowY ->
+    return (1 until dim2 + dim).joinToString("\n") { rowY ->
         gamesRows.joinToString("        ") { it[rowY] }
     }
 }

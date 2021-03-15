@@ -1,7 +1,5 @@
 package sudokusolver
 
-import sudokusolver.Main.dim
-import sudokusolver.Main.dim2
 import sudokusolver.logic.Logic
 
 data class Cell(val locX: Int, val locY: Int, val box_locX: Int, val box_locY: Int, val givenValue: Int = 0, var numbers: HashSet<Int> = Logic.numberSet)

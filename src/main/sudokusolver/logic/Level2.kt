@@ -3,7 +3,6 @@ package sudokusolver.logic
 import sudokusolver.*
 import sudokusolver.CellCollectionType.COLUMN
 import sudokusolver.CellCollectionType.ROW
-import sudokusolver.Main.dim2
 
 @Throws(FillingException::class)
 internal fun intersectionRemoval(game: Game): Boolean {
